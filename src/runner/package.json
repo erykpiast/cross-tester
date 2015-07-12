@@ -1,0 +1,25 @@
+{
+  "name": "websites-tester-runner",
+  "version": "1.0.0",
+  "description": "Tests runner for Websites Tester",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/UsabilityTools/toyStory.git"
+  },
+  "author": "UsabilityTools.com",
+  "private": true,
+  "bugs": {
+    "url": "https://github.com/UsabilityTools/toyStory/issues"
+  },
+  "homepage": "https://github.com/UsabilityTools/toyStory#readme",
+  "dependencies": {
+    
+  },
+  "devDependencies": {
+    "babel": "^5.6.7"
+  }
+}

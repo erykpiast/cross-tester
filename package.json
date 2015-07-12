@@ -1,0 +1,35 @@
+{
+  "name": "cross-tester",
+  "version": "1.0.0",
+  "description": "Utility for automated cross-browser testing with SauceLabs",
+  "main": "dist/index.js",
+  "scripts": {
+    "jshint": "jshint src/",
+    "do": "babel-node src/index.js"
+  },
+  "keywords": [
+    "bots"
+  ],
+  "private": true,
+  "author": "Eryk Napierała",
+  "license": "ISC",
+  "dependencies": {
+    "babelify": "^6.1.2",
+    "bluebird": "^2.9.30",
+    "browserify": "^10.2.4",
+    "chalk": "^1.0.0",
+    "lodash.assign": "^3.2.0",
+    "lodash.defaults": "^3.1.1",
+    "lodash.flatten": "^3.0.2",
+    "lodash.foreach": "^3.0.3",
+    "lodash.mapvalues": "^3.0.1",
+    "lodash.omit": "^3.1.0",
+    "minifyify": "^7.0.2",
+    "moment": "^2.10.3",
+    "wd": "^0.3.12",
+    "dedent": "^0.4.0"
+  },
+  "devDependencies": {
+    "babel": "^5.6.14"
+  }
+}
