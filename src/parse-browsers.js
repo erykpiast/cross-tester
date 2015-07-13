@@ -12,7 +12,7 @@ import omit from 'lodash.omit';
 
 
 /**
- * @function flatten - make browsers definition object flat and compatible with Selenium
+ * @function parseBrowsers - make browsers definition object flat and compatible with Selenium
  * @param {Object} nested - nested browsers definition object
  * @property {Object} nested[browser] - definition of single group of browsers; the "browser" key is human-readable name (like Chrome, Internet Explorer)
  *     @property {String} nested[browser].browserName - name of the browser for Selenium (like firefox, chrome, iPhone)
@@ -41,7 +41,7 @@ import omit from 'lodash.omit';
  *     @property {String} flat[browser].device - name of the Selenium (Appium?) device to run the browser on (like iPhone 6 Plus, iPad 3)
  *     @property {*} flat[browser][any] - any property (except versions, deviceType, deviceName, versionName) from source object (like realMobile)
  */
-export function flatten(nested) {
+export default function parseBrowsers(nested) {
     let flat = { };
 
     each(nested, function(browser, browserName) {

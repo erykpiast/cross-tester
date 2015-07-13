@@ -1,7 +1,6 @@
 import webdriver from 'wd';
 // it's soo cool to override globals! (yes, Promise is one for some time)
 import Promise from 'bluebird';
-import dedent from 'dedent';
 import { parse as parseUrl } from 'url';
 
 

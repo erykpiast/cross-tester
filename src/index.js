@@ -1,42 +1,50 @@
-import chalk from 'chalk';
-import fs from 'fs';
-import { run } from './runner';
-import { get as getTestCases } from './test-cases';
-import { flatten as flattenBrowsers } from './parse-browsers';
+import extend from 'lodash.assign';
+
+import { concurrent } from './promises-util';
+import parseBrowsers from './parse-browsers';
+import { createTest, concurrencyLimit } from './providers/saucelabs';
 
 
-// loading config >>
-let configName = process.argv[2];
-if(!configName) {
-    _exit('no config name provided', 1);
+
+export default function run(browsers, code, { userName, accessToken }) {
+    let parsed = parseBrowsers(browsers);
+    // define tests for all websites in all browsers (from current config file)
+    let testingSessions = Object.keys(parsed)
+    .map((browserName) => ({
+        test: createTest(parsed[browserName], userName, accessToken),
+        browser: extend({
+            name: browserName
+        }, parsed[browserName])
+    }))
+    .map(({ test, browser }) =>
+        () =>
+            Promise.resolve()
+            .then(test.open('http://main-c9-erykpiast.c9.io/'))
+            .then(test.execute(code))
+            .then(test.sleep(1000))
+            .then(() =>
+                Promise.all([
+                    test.getResults(),
+                    test.getBrowserLogs()
+                ]).then((results, logs) => ({
+                    browser: browser.name,
+                    results,
+                    logs
+                }))
+            ).then(
+                test.quit(),
+                test.quit()
+            )
+    );
+
+
+    // run all tests with some concurrency
+    return concurrent(testingSessions, concurrencyLimit)
+        .then((results) => 
+            results.reduce((map, { browser, results, logs }) => {
+                map[browser] = { results, logs };
+                
+                return map;
+            })
+        );
 }
-
-let configPath = `${__dirname}/conf/${configName}.json`;
-if(!fs.existsSync(configPath)) {
-    _exit('unkown config name provided', 1);
-}
-
-const { browsers, concurrencyLimit } = JSON.parse(fs.readFileSync(configPath));
-// << loading config
-
-if(!process.env.SAUCELABS_USERNAME || !process.env.SAUCELABS_ACCESSTOKEN) {
-    _exit(`Credentials for SauceLabs not provided. Set both SAUCELABS_USERNAME
-        and SAUCELABS_ACCESSTOKEN enviroment variables before running the script.`, 1);
-}
-
-
-console.log(chalk.cyan.bold('compiling test cases...'));
-getTestCases().then((testCases) => {
-    console.log(chalk.cyan.bold(`starting tests with config "${configName}" and concurrency limit ${concurrencyLimit}...`));
-    run(flattenBrowsers(browsers), testCases, {
-        userName: process.env.SAUCELABS_USERNAME,
-        accessToken: process.env.SAUCELABS_ACCESSTOKEN
-    });
-}, (err) => console.log(chalk.red.bold(`error when compiling test cases: ${err.message}`)));
-
-
-function _exit(message, errorCode) {
-    console.error(chalk.red(message));
-    process.exit(errorCode);
-}
-
