@@ -1,4 +1,16 @@
-import Promise from 'bluebird';
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+exports.chain = chain;
+exports.concurrent = concurrent;
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _bluebird = require('bluebird');
+
+var _bluebird2 = _interopRequireDefault(_bluebird);
 
 /**
  * @function chain - creates sequence of promises from array or tree
@@ -44,21 +56,23 @@ import Promise from 'bluebird';
  *     console.log(res);
  * });
  */
-export function chain(init, sequence) {
-    let results = [ ];
-    return sequence.reduce((prev, curr) =>
-        Array.isArray(curr) ? chain(prev, curr).then((result) => {
+
+function chain(init, sequence) {
+    var results = [];
+    return sequence.reduce(function (prev, curr) {
+        return Array.isArray(curr) ? chain(prev, curr).then(function (result) {
             results.push(result);
 
             return result;
-        }) : curr(prev).then((result) => {
+        }) : curr(prev).then(function (result) {
             results.push(result);
 
             return result;
-        }),
-    init).then(() => results);
+        });
+    }, init).then(function () {
+        return results;
+    });
 }
-
 
 /**
  * @function concurrent - runs promises in parallel with concurrency limit
@@ -68,6 +82,9 @@ export function chain(init, sequence) {
  *                               see Bluebird's Promises.map documentation
  * @param {Number} limit - maximum number of pending promises
  */
-export function concurrent(fns, limit) {
-    return Promise.map(fns, (fn) => fn(), { concurrency: limit });
+
+function concurrent(fns, limit) {
+    return _bluebird2['default'].map(fns, function (fn) {
+        return fn();
+    }, { concurrency: limit });
 }

@@ -4,8 +4,16 @@
   "description": "Utility for automated cross-browser testing with SauceLabs",
   "main": "dist/index.js",
   "scripts": {
-    "jshint": "jshint src/",
-    "do": "babel-node src/index.js"
+    "lint": "eslint src/",
+    "mocha": "mocha --compilers js:babel/register --reporter spec --ui tdd test",
+    "test": "npm run lint && npm run mocha",
+    "precompile": "rm -rf dist/ && mkdir -p dist",
+    "compile": "babel -d dist/ src/",
+    "prepublish": "npm run lint && npm run precompile && npm run compile",
+    "release": "npm run release-patch",
+    "release-patch": "git checkout master && npm run prepublish; git commit -a -m 'Build dist/'; npm version patch && git push origin master --tags && npm publish --access=public",
+    "release-minor": "git checkout master && npm run prepublish; git commit -a -m 'Build dist/'; npm version minor && git push origin master --tags && npm publish --access=public",
+    "release-major": "git checkout master && npm run prepublish; git commit -a -m 'Build dist/'; npm version major && git push origin master --tags && npm publish --access=public"
   },
   "keywords": [
     "bots"
@@ -31,6 +39,9 @@
     "wd": "^0.3.12"
   },
   "devDependencies": {
-    "babel": "^5.6.14"
+    "babel": "^5.6.14",
+    "chai": "^3.1.0",
+    "eslint": "^1.0.0-rc-1",
+    "mocha": "^2.2.5"
   }
 }

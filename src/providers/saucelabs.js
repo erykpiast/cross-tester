@@ -165,8 +165,8 @@ export function createTest(browser, userName, accessToken) {
     }
 
 
-    function getBrowserLogs(level) {
-        level = ((levels[level] || { value: 0 }).value || levels.INFO.value);
+    function getBrowserLogs(levelName) {
+        let level = ((levels[levelName] || { value: 0 }).value || levels.INFO.value);
 
         return () => driver.logTypes().then(
             (types) =>
@@ -301,7 +301,8 @@ export function createTest(browser, userName, accessToken) {
 
     function moveMouse(/*[element], x, y*/) {
         let element;
-        let x, y;
+        let x;
+        let y;
         let args = arguments;
 
         return () => {

@@ -4,18 +4,36 @@
 
 // Apple devices version market share
 // http://david-smith.org/iosversionstats/
-import each from 'lodash.foreach';
-import extend from 'lodash.assign';
-import mapValues from 'lodash.mapvalues';
-import omit from 'lodash.omit';
+'use strict';
 
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+exports['default'] = parseBrowsers;
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _lodashForeach = require('lodash.foreach');
+
+var _lodashForeach2 = _interopRequireDefault(_lodashForeach);
+
+var _lodashAssign = require('lodash.assign');
+
+var _lodashAssign2 = _interopRequireDefault(_lodashAssign);
+
+var _lodashMapvalues = require('lodash.mapvalues');
+
+var _lodashMapvalues2 = _interopRequireDefault(_lodashMapvalues);
+
+var _lodashOmit = require('lodash.omit');
+
+var _lodashOmit2 = _interopRequireDefault(_lodashOmit);
 
 function _removeWorkingKeys(obj) {
-    return mapValues(obj, (browser) =>
-        omit(browser, [ 'versions', 'deviceType', 'deviceName', 'versionName' ])
-    );
+    return (0, _lodashMapvalues2['default'])(obj, function (browser) {
+        return (0, _lodashOmit2['default'])(browser, ['versions', 'deviceType', 'deviceName', 'versionName']);
+    });
 }
-
 
 /**
  * @function parseBrowsers - make browsers definition object flat and compatible with Selenium
@@ -47,35 +65,36 @@ function _removeWorkingKeys(obj) {
  *     @property {String} flat[browser].device - name of the Selenium (Appium?) device to run the browser on (like iPhone 6 Plus, iPad 3)
  *     @property {*} flat[browser][any] - any property (except versions, deviceType, deviceName, versionName) from source object (like realMobile)
  */
-export default function parseBrowsers(nested) {
-    let flat = { };
 
-    each(nested, (browser, browserName) => {
-        if(('object' !== typeof browser.versions) || browser.versions === null) {
+function parseBrowsers(nested) {
+    var flat = {};
+
+    (0, _lodashForeach2['default'])(nested, function (browser, browserName) {
+        if ('object' !== typeof browser.versions || browser.versions === null) {
             throw new Error('wrong object format: version property has to be an object');
         }
 
-        each(browser.versions, (version, versionName) => {
-            if(('object' === typeof version) && (version !== null) && version.hasOwnProperty('devices') && Array.isArray(version.devices)) {
-                version.devices.forEach((deviceModel) => {
-                    let key = `${browserName} ${version.osVersion} - ${browser.deviceName} ${deviceModel}`;
+        (0, _lodashForeach2['default'])(browser.versions, function (version, versionName) {
+            if ('object' === typeof version && version !== null && version.hasOwnProperty('devices') && Array.isArray(version.devices)) {
+                version.devices.forEach(function (deviceModel) {
+                    var key = browserName + ' ' + version.osVersion + ' - ' + browser.deviceName + ' ' + deviceModel;
 
-                    flat[key] = extend({
+                    flat[key] = (0, _lodashAssign2['default'])({
                         'browserName': browser.browserName,
                         'platform': browser.platform,
                         'os_version': version.osVersion.toString(),
                         'device': browser.deviceName + ' ' + deviceModel
                     }, browser);
                 });
-            } else if(('string' === typeof version) || ('number' === typeof version)) {
-                let key = `${browserName} ${version}`;
+            } else if ('string' === typeof version || 'number' === typeof version) {
+                var key = browserName + ' ' + version;
 
-                flat[key] = extend({
+                flat[key] = (0, _lodashAssign2['default'])({
                     'browserName': browser.browserName,
                     'platform': browser.platform,
                     'version': version.toString()
                 }, browser);
-            } else if(version === null) {
+            } else if (version === null) {
                 console.warn('There is no defined version for ' + browserName + ' ' + versionName);
             } else {
                 throw new Error('wrong object format: version has to be an object or a string');
@@ -85,3 +104,5 @@ export default function parseBrowsers(nested) {
 
     return _removeWorkingKeys(flat);
 }
+
+module.exports = exports['default'];
