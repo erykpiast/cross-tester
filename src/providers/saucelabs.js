@@ -299,6 +299,13 @@ export function createTest(browser, userName, accessToken) {
     }
 
 
+    function findElement(selector) {
+        return driver.elementByCssSelector(selector).then((element) =>
+            Array.isArray(element) ? element[0] : element
+        );
+    }
+
+
     function moveMouse(/*[element], x, y*/) {
         let element;
         let x;
@@ -320,13 +327,6 @@ export function createTest(browser, userName, accessToken) {
                 driver.moveTo(elementId, x, y)
             );
         };
-    }
-
-
-    function findElement(selector) {
-        return driver.elementByCssSelector(selector).then((element) =>
-            Array.isArray(element) ? element[0] : element
-        );
     }
 
 

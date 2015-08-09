@@ -124,9 +124,9 @@ function createTest(browser, userName, accessToken) {
             return driver.logTypes().then(function (types) {
                 return Array.isArray(types) && types.indexOf('browser') !== -1 ? driver.log('browser') : _bluebird2['default'].resolve([]);
             }, function () {
-                return [] // supress error
-                ;
-            }).then(function (logs) {
+                return [];
+            } // supress error
+            ).then(function (logs) {
                 return browserLogs = browserLogs.concat(logs);
             }).then(function (logs) {
                 var notGot = logs.slice(browserLogsGot);
@@ -137,7 +137,7 @@ function createTest(browser, userName, accessToken) {
                     return levels[log.level].value >= level;
                 });
             }).then(function (logs) {
-                return (
+                return(
                     // parse Firefox logs from addons and Chrome logs
                     logs.map(function (log) {
                         // parse logs from Firefox addons
@@ -250,7 +250,13 @@ function createTest(browser, userName, accessToken) {
         };
     }
 
-    function moveMouse() {
+    function findElement(selector) {
+        return driver.elementByCssSelector(selector).then(function (element) {
+            return Array.isArray(element) ? element[0] : element;
+        });
+    }
+
+    function moveMouse() /*[element], x, y*/{
         var element = undefined;
         var x = undefined;
         var y = undefined;
@@ -273,12 +279,6 @@ function createTest(browser, userName, accessToken) {
         };
     }
 
-    function findElement(selector) {
-        return driver.elementByCssSelector(selector).then(function (element) {
-            return Array.isArray(element) ? element[0] : element;
-        });
-    }
-
     return {
         enter: enter,
         quit: quit,
@@ -291,5 +291,3 @@ function createTest(browser, userName, accessToken) {
         moveMouse: moveMouse
     };
 }
-
-/*[element], x, y*/
