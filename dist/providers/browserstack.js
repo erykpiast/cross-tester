@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.concurrencyLimit = exports.name = undefined;
+exports.concurrencyLimit = undefined;
 exports.createTest = createTest;
 
 var _wd = require('wd');
@@ -71,8 +71,6 @@ var chromeLogMessagePattern = /^(javascript|(?:(?:https?|chrome-extension)\:\/\/
 var firefoxAddonLogPattern = /^(\d{13})\t(\S*(?:addons|extensions)\S*)\t([A-Z]+)\t(.*)\n?$/i;
 var androidEmulatorLogMessagePattern = /^\[([0-9\-\A-Z:]+)\](?:\s+\[[A-Z]+\]\s+[A-Z]{1}\/[a-z0-9\/\._]+\s*(?:\[[^\]]+\])?\(\s+\d+\)\:\s+)?(?:\-+\s+beginning\s+of\s+[a-z]+)?(.*)$/i;
 var androidEmulatorLogBrowserMessagePattern = /^\[([0-9\-\A-Z:]+)\]\s+\[[A-Z]+\]\s+I\/chromium\(\s+\d+\)\:\s+\[([A-Z]+)\:CONSOLE\(\d+\)\]\s+\"(.*)",\s+source\:\s+(\S*)\s+\((\d+)\)$/i;
-
-var name = exports.name = 'saucelabs';
 
 var concurrencyLimit = exports.concurrencyLimit = 8;
 
@@ -253,3 +251,5 @@ function createTest(browser, userName, accessToken) {
     sleep: sleep
   };
 }
+
+exports.default = { createTest: createTest, concurrencyLimit: concurrencyLimit };

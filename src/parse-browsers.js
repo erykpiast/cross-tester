@@ -4,16 +4,17 @@
 
 // Apple devices version market share
 // http://david-smith.org/iosversionstats/
-import each from 'lodash.foreach';
-import extend from 'lodash.assign';
-import mapValues from 'lodash.mapvalues';
-import omit from 'lodash.omit';
-
+import {
+  each,
+  extend,
+  omit,
+  mapValues
+} from 'lodash';
 
 function _removeWorkingKeys(obj) {
-    return mapValues(obj, (browser) =>
-        omit(browser, [ 'versions', 'deviceType', 'deviceName', 'versionName' ])
-    );
+  return mapValues(obj, (browser) =>
+    omit(browser, [ 'versions', 'deviceType', 'deviceName', 'versionName' ])
+  );
 }
 
 
@@ -48,40 +49,40 @@ function _removeWorkingKeys(obj) {
  *     @property {*} flat[browser][any] - any property (except versions, deviceType, deviceName, versionName) from source object (like realMobile)
  */
 export default function parseBrowsers(nested) {
-    let flat = { };
+  let flat = { };
 
-    each(nested, (browser, browserName) => {
-        if(('object' !== typeof browser.versions) || browser.versions === null) {
-            throw new Error('wrong object format: version property has to be an object');
-        }
+  each(nested, (browser, browserName) => {
+    if(('object' !== typeof browser.versions) || browser.versions === null) {
+      throw new Error('wrong object format: version property has to be an object');
+    }
 
-        each(browser.versions, (version, versionName) => {
-            if(('object' === typeof version) && (version !== null) && version.hasOwnProperty('devices') && Array.isArray(version.devices)) {
-                version.devices.forEach((deviceModel) => {
-                    let key = `${browserName} ${version.osVersion} - ${browser.deviceName} ${deviceModel}`;
+    each(browser.versions, (version, versionName) => {
+      if(('object' === typeof version) && (version !== null) && version.hasOwnProperty('devices') && Array.isArray(version.devices)) {
+        version.devices.forEach((deviceModel) => {
+          let key = `${browserName} ${version.osVersion} - ${browser.deviceName} ${deviceModel}`;
 
-                    flat[key] = extend({
-                        'browserName': browser.browserName,
-                        'platform': browser.platform,
-                        'os_version': version.osVersion.toString(),
-                        'device': browser.deviceName + ' ' + deviceModel
-                    }, browser);
-                });
-            } else if(('string' === typeof version) || ('number' === typeof version)) {
-                let key = `${browserName} ${version}`;
-
-                flat[key] = extend({
-                    'browserName': browser.browserName,
-                    'platform': browser.platform,
-                    'version': version.toString()
-                }, browser);
-            } else if(version === null) {
-                console.warn('There is no defined version for ' + browserName + ' ' + versionName);
-            } else {
-                throw new Error('wrong object format: version has to be an object or a string');
-            }
+          flat[key] = extend({
+            'browserName': browser.browserName,
+            'platform': browser.platform,
+            'os_version': version.osVersion.toString(),
+            'device': browser.deviceName + ' ' + deviceModel
+          }, browser);
         });
-    });
+      } else if(('string' === typeof version) || ('number' === typeof version)) {
+        let key = `${browserName} ${version}`;
 
-    return _removeWorkingKeys(flat);
+        flat[key] = extend({
+          'browserName': browser.browserName,
+          'platform': browser.platform,
+          'version': version.toString()
+        }, browser);
+      } else if(version === null) {
+        console.warn('There is no defined version for ' + browserName + ' ' + versionName);
+      } else {
+        throw new Error('wrong object format: version has to be an object or a string');
+      }
+    });
+  });
+
+  return _removeWorkingKeys(flat);
 }

@@ -107,9 +107,8 @@ const androidEmulatorLogMessagePattern = /^\[([0-9\-\A-Z:]+)\](?:\s+\[[A-Z]+\]\s
 const androidEmulatorLogBrowserMessagePattern = /^\[([0-9\-\A-Z:]+)\]\s+\[[A-Z]+\]\s+I\/chromium\(\s+\d+\)\:\s+\[([A-Z]+)\:CONSOLE\(\d+\)\]\s+\"(.*)",\s+source\:\s+(\S*)\s+\((\d+)\)$/i;
 
 
-export const name = 'saucelabs';
-
 export const concurrencyLimit = 8;
+
 
 export function createTest(browser, userName, accessToken) {
   let driver;
@@ -302,3 +301,6 @@ export function createTest(browser, userName, accessToken) {
     sleep
   };
 }
+
+
+export default { createTest, concurrencyLimit };
