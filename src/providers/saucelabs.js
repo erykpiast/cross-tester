@@ -2,6 +2,7 @@ import webdriver from 'wd';
 // it's soo cool to override globals! (yes, Promise is one for some time)
 import Promise from 'bluebird';
 import { parse as parseUrl } from 'url';
+import request from 'request-promise';
 
 
 const levels = {
@@ -65,6 +66,7 @@ const ignoredLogs = [
   'Native module at path',
   'Failed to load native module at path',
   'Component returned failure code',
+  'While registering XPCOM module',
   // Facebook script
   'Invalid App Id: Must be a number or numeric string representing the application id.',
   'The "fb-root" div has not been created, auto-creating',
@@ -95,12 +97,15 @@ const ignoredLogs = [
   'Refused to set unsafe header',
   'The character encoding of a framed document was not declared',
   'While creating services from category',
-  'unrecognized command line flag'
+  'unrecognized command line flag',
+  'Only application manifests may use',
+  'Get a connection to permissions.sqlite.',
+  'DB table(moz_perms) is created'
 ];
 
 const RESULTS_ARRAY_NAME = 'window.__results__';
 
-const DEFAULT_TIMEOUT = 30 * 1000;
+const DEFAULT_TIMEOUT = 60 * 1000;
 const chromeLogMessagePattern = /^(javascript|(?:(?:https?|chrome-extension)\:\/\/\S+))\s+(\d+:\d+)\s+(.*)$/i;
 const firefoxAddonLogPattern = /^(\d{13})\t(\S*(?:addons|extensions)\S*)\t([A-Z]+)\t(.*)\n?$/i;
 const androidEmulatorLogMessagePattern = /^\[([0-9\-\A-Z:]+)\](?:\s+\[[A-Z]+\]\s+[A-Z]{1}\/[a-z0-9\/\._]+\s*(?:\[[^\]]+\])?\(\s+\d+\)\:\s+)?(?:\-+\s+beginning\s+of\s+[a-z]+)?(.*)$/i;
@@ -109,7 +114,27 @@ const androidEmulatorLogBrowserMessagePattern = /^\[([0-9\-\A-Z:]+)\]\s+\[[A-Z]+
 
 export const name = 'saucelabs';
 
-export const concurrencyLimit = 8;
+/**
+ * @function getConcurrencyLimit - returns concurrency limit for the account
+ *
+ * @param {String} userName
+ * @param {String} accessToken
+ *
+ * @return {Promise<Number>} number of available concurrent VMs for the account
+ */
+export function getConcurrencyLimit(userName, accessToken) {
+  const API_ROOT = 'https://saucelabs.com/rest/v1/';
+  return request(API_ROOT + `users/${userName}/concurrency`, {
+    auth: {
+      user: userName,
+      pass: accessToken,
+      sendImmediately: false
+    }
+  }).then((res) => {
+    const parsed = JSON.parse(res);
+    return parseInt(parsed.concurrency[userName].remaining.mac, 0);
+  });
+}
 
 export function createTest(browser, userName, accessToken) {
   let driver;
@@ -119,12 +144,12 @@ export function createTest(browser, userName, accessToken) {
 
   function enter() {
     return () => {
-      driver = webdriver.promiseRemote(
-        'ondemand.saucelabs.com',
-        80,
-        userName,
-        accessToken
-      );
+      driver = webdriver.remote({
+        hostname: 'ondemand.saucelabs.com',
+        port: 80,
+        user: userName,
+        pwd: accessToken
+      }, 'promise');
 
       // maybe we can use this?
       // wd.configureHttp({
@@ -134,7 +159,7 @@ export function createTest(browser, userName, accessToken) {
       // });
       return Promise.race([
         Promise.delay(DEFAULT_TIMEOUT).then(() => {
-          throw new Error('cannot connect to SauceLabs in 10 seconds');
+          throw new Error(`cannot connect to SauceLabs in ${DEFAULT_TIMEOUT} seconds`);
         }),
         driver.init(browser)
         .then((_session_) => {
@@ -152,7 +177,7 @@ export function createTest(browser, userName, accessToken) {
 
 
   function _formatUrl(url) {
-    let { protocol, hostname, port, pathname } = parseUrl(url);
+    const { protocol, hostname, port, pathname } = parseUrl(url);
 
     return [
       protocol ? `${protocol}//` : '',
@@ -164,7 +189,7 @@ export function createTest(browser, userName, accessToken) {
 
 
   function getBrowserLogs(levelName) {
-    let level = ((levels[levelName] || { value: 0 }).value || levels.INFO.value);
+    const level = ((levels[levelName] || { value: 0 }).value || levels.INFO.value);
 
     return () => driver.logTypes().then(
       (types) =>
@@ -177,7 +202,7 @@ export function createTest(browser, userName, accessToken) {
     .then((logs) =>
       browserLogs = browserLogs.concat(logs)
     ).then((logs) => {
-      let notGot = logs.slice(browserLogsGot);
+      const notGot = logs.slice(browserLogsGot);
 
       browserLogsGot = logs.length;
 
@@ -189,7 +214,7 @@ export function createTest(browser, userName, accessToken) {
     // parse Firefox logs from addons and Chrome logs
       logs.map((log) => {
         // parse logs from Firefox addons
-        let addonLog = log.message.match(firefoxAddonLogPattern);
+        const addonLog = log.message.match(firefoxAddonLogPattern);
         if(addonLog) {
           return {
             addon: true,
@@ -200,7 +225,7 @@ export function createTest(browser, userName, accessToken) {
         }
 
         // parse logs from Chrome
-        let chromeLogMessage = log.message.match(chromeLogMessagePattern);
+        const chromeLogMessage = log.message.match(chromeLogMessagePattern);
         if(chromeLogMessage) {
           return {
             addon: chromeLogMessage[1].indexOf('chrome-extension://') === 0,
@@ -214,7 +239,7 @@ export function createTest(browser, userName, accessToken) {
 
         // parse logs from Android emulator
         if(log.message.match(androidEmulatorLogMessagePattern)) {
-          let androidEmulatorBrowserMessage = log.message.match(androidEmulatorLogBrowserMessagePattern);
+          const androidEmulatorBrowserMessage = log.message.match(androidEmulatorLogBrowserMessagePattern);
           if(androidEmulatorBrowserMessage) {
             return {
               addon: false,
@@ -229,7 +254,7 @@ export function createTest(browser, userName, accessToken) {
           }
         }
 
-        // try to parse custom logs from TaniaKsiazka.pl
+        // try to parse custom logs where message is stringified object
         let parsed;
         try {
           parsed = JSON.parse(log.message);
@@ -237,7 +262,7 @@ export function createTest(browser, userName, accessToken) {
 
         if(parsed && ('object' === typeof parsed.message) && (parsed.message !== null)) {
           return {
-            timestamp: Math.random(parsed.message.timestamp * 1000),
+            timestamp: Math.round(parsed.message.timestamp * 1000),
             level: parsed.message.level,
             file: _formatUrl(parsed.message.url),
             line: `${parsed.message.line}:${parsed.message.column}`,
@@ -261,7 +286,10 @@ export function createTest(browser, userName, accessToken) {
 
 
   function getResults() {
-    return () => driver.execute(`return ${RESULTS_ARRAY_NAME};`);
+    // it more safe to send stringified results through WD and parse it here
+    // ex. MS Edge likes return arrays as object with numeric keys
+    return () => driver.execute(`return JSON.stringify(${RESULTS_ARRAY_NAME});`)
+      .then((json) => JSON.parse(json));
   }
 
 
@@ -279,7 +307,7 @@ export function createTest(browser, userName, accessToken) {
     return () =>
       Promise.race([
         Promise.delay(DEFAULT_TIMEOUT).then(() => {
-          throw new Error(`cannot open page ${url} in 10 seconds`);
+          throw new Error(`cannot open page ${url} in ${DEFAULT_TIMEOUT} seconds`);
         }),
         driver.get(url)
           .then(execute(`${RESULTS_ARRAY_NAME} = [];`))

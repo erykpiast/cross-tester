@@ -8,76 +8,81 @@ import {
   each,
   extend,
   omit,
-  mapValues
+  mapValues,
+  isObject,
+  isString,
+  isNumber
 } from 'lodash';
 
 function _removeWorkingKeys(obj) {
   return mapValues(obj, (browser) =>
-    omit(browser, [ 'versions', 'deviceType', 'deviceName', 'versionName' ])
+    omit(browser, [ 'versions', 'deviceType', 'deviceName', 'versionName', 'osVersion' ])
   );
 }
 
 
 /**
  * @function parseBrowsers - make browsers definition object flat and compatible with Selenium
+ *
  * @param {Object} nested - nested browsers definition object
- * @property {Object} nested[browser] - definition of single group of browsers; the "browser" key is human-readable name (like Chrome, Internet Explorer)
- *     @property {String} nested[browser].browserName - name of the browser for Selenium (like firefox, chrome, iPhone)
- *     @property {String} nested[browser].deviceName - name of the device to run the browser on (mostly for Apple devices, like iPhone, iPad)
- *     @property {Object} nested[browser].versions - versions of the browser
- *         @property {String|Object} nested[browser].versions[version] - single version of the browser; the "version" key is human-readable name (like previous, current);
- *              - if it's a string, it's just copied to "version" property of target object
- *              - if it's an object it has properties:
- *             @property {String} nested[browser].versions[version].osVersion - version of operating system (mostly for iOS, like 7.1, 8)
- *             @property {Array} nested[browser].versions[version].devices - device models to run the browser on (mostly for Apple devices, like Plus, 5S, Mini 3);
- *                 this will be concatenated with value of "deviceName" field and copied to "device" property of target object
- *     @property {String} nested[browser].platform - name of the Selenium platform to run the browser on (like Windows, MAC)
- *     @property {String} nested[browser].os_version - version of os to run the browser on (like 8.1, 10.10)
- *     @property {String} nested[browser].device - name of the Selenium (Appium?) device to run the browser on (like iPhone 6 Plus, iPad 3)
- *     @property {*} nested[browser][any] - whatever you want, it will be copied to target object (like realMobile)
+ *   @property {Object} BROWSER - definition of single group of browsers; the "browser" key is human-readable name (like Chrome, Internet Explorer)
+ *     @property {String} browserName - name of the browser for Selenium (like firefox, chrome, iPhone)
+ *     @property {String} deviceName - name of the device to run the browser on (mostly for Apple devices, like iPhone, iPad)
+ *     @property {Object} versions - versions of the browser
+ *       @property {String|Object} VERSION - single version of the browser; the "version" key is human-readable name (like previous, current);
+ *         - if it's a string, it's just copied to "version" property of target object
+ *         - if it's an object it has properties:
+ *         @property {String} osVersion - version of operating system (mostly for iOS, like 7.1, 8)
+ *         @property {String[]} devices - device models to run the browser on (mostly for Apple devices, like Plus, 5S, Mini 3);
+ *           this will be concatenated with value of "deviceName" field and copied to "device" property of target object
+ *     @property {String} platform - name of the Selenium platform to run the browser on (like Windows, MAC)
+ *     @property {String} osVersion - version of os to run the browser on (like 8.1, 10.10)
+ *     @property {String} device - name of the Selenium (Appium?) device to run the browser on (like iPhone 6 Plus, iPad 3)
+ *     @property {*} ANY - whatever you want, it will be copied to target object (like realMobile)
+ *
  * @return {Object} flat browsers definition object
- * @property {Object} flat[browser] - definition of single browser; the "browser" key is in format
+ *   @property {Object} BROWSER - definition of single browser; the "browser" key is in format
  *     - for "device browsers" like iPhone and iPad Safari:
  *         `${browserName} ${versionName} (${version.osVersion}) - ${browser.deviceName} ${deviceModel}`
  *     - for any other browser:
  *         `${browserName} ${versionName} (${version})`
- *     @property {String} flat[browser].browserName - name of the browser for Selenium (like firefox, chrome, iPhone)
- *     @property {String} flat[browser].version - version of the browser for Selenium (like 11, 41, 8.1)
- *     @property {String} flat[browser].platform - name of the Selenium platform to run the browser on (like Windows, MAC)
- *     @property {String} flat[browser].os_version - version of os to run the browser on (like 8.1, 10.10)
- *     @property {String} flat[browser].device - name of the Selenium (Appium?) device to run the browser on (like iPhone 6 Plus, iPad 3)
- *     @property {*} flat[browser][any] - any property (except versions, deviceType, deviceName, versionName) from source object (like realMobile)
+ *     @property {String} browserName - name of the browser for Selenium (like firefox, chrome, iPhone)
+ *     @property {String} version - version of the browser for Selenium (like 11, 41, 8.1)
+ *     @property {String} platform - name of the Selenium platform to run the browser on (like Windows, MAC)
+ *     @property {String} os_version - version of os to run the browser on (like 8.1, 10.10)
+ *     @property {String} device - name of the Selenium (Appium?) device to run the browser on (like iPhone 6 Plus, iPad 3)
+ *     @property {*} ANY - any property (except versions, deviceType, deviceName, versionName) from source object (like realMobile)
  */
 export default function parseBrowsers(nested) {
-  let flat = { };
+  const flat = { };
 
   each(nested, (browser, browserName) => {
-    if(('object' !== typeof browser.versions) || browser.versions === null) {
-      throw new Error('wrong object format: version property has to be an object');
+    if(!isObject(browser.versions)) {
+      throw new Error('wrong object format: versions property must be an object');
     }
 
     each(browser.versions, (version, versionName) => {
-      if(('object' === typeof version) && (version !== null) && version.hasOwnProperty('devices') && Array.isArray(version.devices)) {
+      if(isObject(version) && version.hasOwnProperty('devices') && Array.isArray(version.devices)) {
         version.devices.forEach((deviceModel) => {
-          let key = `${browserName} ${version.osVersion} - ${browser.deviceName} ${deviceModel}`;
+          const key = `${browserName} ${version.osVersion} - ${browser.deviceName} ${deviceModel}`;
 
-          flat[key] = extend({
-            'browserName': browser.browserName,
-            'platform': browser.platform,
-            'os_version': version.osVersion.toString(),
-            'device': browser.deviceName + ' ' + deviceModel
-          }, browser);
+          flat[key] = extend({}, browser, {
+            browserName: browser.browserName,
+            platform: browser.platform,
+            os_version: (version.osVersion || browser.osVersion).toString(),
+            device: `${browser.deviceName} ${deviceModel}`
+          });
         });
-      } else if(('string' === typeof version) || ('number' === typeof version)) {
-        let key = `${browserName} ${version}`;
+      } else if(isString(version) || isNumber(version)) {
+        const key = `${browserName} ${version}`;
 
-        flat[key] = extend({
-          'browserName': browser.browserName,
-          'platform': browser.platform,
-          'version': version.toString()
-        }, browser);
+        flat[key] = extend({}, browser, {
+          browserName: browser.browserName,
+          platform: browser.platform + (browser.hasOwnProperty('osVersion') ? ` ${browser.osVersion}` : ''),
+          version: version.toString()
+        });
       } else if(version === null) {
-        console.warn('There is no defined version for ' + browserName + ' ' + versionName);
+        console.warn(`There is no defined version for ${browserName} ${versionName}`);
       } else {
         throw new Error('wrong object format: version has to be an object or a string');
       }

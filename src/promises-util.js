@@ -79,7 +79,7 @@ export function concurrent(fns, limit) {
 
 /**
  * @function andReturn - creates function that calls passed function with its
- *   argument and returns the argument
+ *   argument and returns the argument when promise returned by it is fulfilled
  * @access pubilc
  *
  * @param {Function} fn
@@ -87,16 +87,14 @@ export function concurrent(fns, limit) {
  * @return {Function}
  */
 export function andReturn(fn) {
-  return (data) => {
-    fn(null, data);
-    return data;
-  };
+  return (data) =>
+    fn(null, data).then(() => data, () => data);
 }
 
 
 /**
  * @function andThrow - creates function that calls passed function with its
- *   argument and throws the argument
+ *   argument and throws the argument when promise returned by it is fulfilled
  * @access pubilc
  *
  * @param {Function} fn
@@ -104,8 +102,24 @@ export function andReturn(fn) {
  * @return {Function}
  */
 export function andThrow(fn) {
-  return (err) => {
-    fn(err);
-    return err;
-  };
+  return (err) =>
+    fn(err).then(() => {
+      throw err;
+    }, () => {
+      throw err;
+    });
+}
+
+
+/**
+ * @function call - simply calls provided function
+ * @access pubilc
+ *
+ * @param {Function} fn
+ * @param {*} [...args]- 
+ *
+ * @return {Function}
+ */
+export function call(fn, ...args) {
+  return fn(...args);
 }
