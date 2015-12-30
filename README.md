@@ -3,6 +3,12 @@ Utility for automated cross-browser testing. It allows to execute piece of
 JavaScript code in many browsers (using SauceLabs Selenium/Appium grid) and
 compare results for each one.
 
+## Installation
+
+```
+npm install cross-tester
+```
+
 ## Usage
 
 ```javascript
