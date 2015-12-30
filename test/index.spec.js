@@ -21,7 +21,7 @@ import { default as run, __RewireAPI__ as RewireAPI } from '../src/index';
 
 RewireAPI.__Rewire__('providers', {
   test: {
-    concurrencyLimit: 1,
+    getConcurrencyLimit: () => Promise.resolve(1),
     createTest: createTestMock
   }
 });
@@ -163,7 +163,7 @@ suite('creating test sessions', () => {
 
     makeItAllRight();
   });
-  
+
   test(`resolving returned promise`, (done) => {
     let resolved;
     run(VALID_CONFIG).then(() => {
@@ -200,12 +200,17 @@ suite('error handling', () => {
 
   test('calling quit when error occurs', (done) => {
     run(VALID_CONFIG).then(() => {
-      assert.lengthOf(createdTests, 3);
       createdTests.forEach(({ quit }) => {
-        assert.calledExactly(quit, 1, 'quit method called');
+        // why check it like that? quit method is called twice (once for
+        // success, once for failure path) and we wish to know if any function
+        // returned by one of those calls was called (no matter which one)
+        const callsCount = quit.returned
+          .map((returnedByQuit) => returnedByQuit.__spy.calls.length)
+          .reduce((acc, value) => acc + value, 0);
+        assert.equal(callsCount, 1, 'function returned by quit method was called once');
       });
       done();
-    });
+    }, console.log.bind(console, 'ERR!'));
 
     throwOn('execute');
   });

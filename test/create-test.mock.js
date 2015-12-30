@@ -1,5 +1,6 @@
 import chai from 'chai';
 import chaiSpies from 'chai-spies';
+import {last} from 'lodash';
 
 chai.use(chaiSpies);
 
@@ -36,22 +37,23 @@ export const mock = chai.spy(function createTest(browser) {
 
 function mockMethod(exports, name, returned) {
   const index = returned[name] = returned.hasOwnProperty(name) ? returned[name] + 1 : 0;
-  exports[name] = chai.spy(function() {
-    return () => {
-      return new Promise((resolve, reject) => {
-        // console.log(`${name} method called`);
-        returned.push({
-          resolve() {
-            // console.log(`${name} method resolved`);
-            resolve();
-          },
-          reject,
-          name,
-          index
-        });
+  exports[name] = chai.spy(() => {
+    const returnedValue = chai.spy(() => new Promise((resolve, reject) => {
+      returned.push({
+        resolve,
+        reject,
+        name,
+        index
       });
-    };
+    }));
+
+    exports[name].returned.push(returnedValue);
+
+    return returnedValue;
   });
+
+  // save values returned by each call of the method
+  exports[name].returned = [];
 }
 
 

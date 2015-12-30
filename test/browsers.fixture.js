@@ -7,6 +7,6 @@ export default [{
 }, {
   name: 'iPhone 8.1',
   platform: 'MAC',
-  os_version: '8.1',
+  osVersion: '8.1',
   device: 'iPhone 5S'
 }];
