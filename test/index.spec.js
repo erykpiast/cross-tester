@@ -85,12 +85,6 @@ suite('API', () => {
 
     assert.throws(() => {
       run(overwrite(VALID_CONFIG, {
-        code: undefined
-      }));
-    }, ERR_PATTERN);
-
-    assert.throws(() => {
-      run(overwrite(VALID_CONFIG, {
         code: null
       }));
     }, ERR_PATTERN, 'throws if code is not a string');

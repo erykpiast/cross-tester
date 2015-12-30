@@ -18,10 +18,33 @@ const providers = {
  * @function run
  * @access public
  * @description runs code in each of provided browsers
+ * 
+ * @param {Object} config
+ *   @property {Object} credentials
+ *     @property {String} userName
+ *     @property {String} accessToken
+ *   @property {Object} browsers - see documentation for input of parse-browsers
+ *     function
+ *   @property {String} [provider='saucelabs']
+ *   @property {String} [code] - valid JS code
+ *   @property {Boolean} [verbose=false] - if true, prints logs about testing
+ *     progress to console
+ *   @property {Number} [timeout=1000] - how long to wait before gathering
+ *     results (after executing code)
+ *   @property {String} [url=http://blank.org] - page to open; by default it's
+ *     blank, but you may wish to use some JSBin instead of providing the code
  *
- * @param
+ * @return {Promise<Object>} collection of results and logs for each browser
+ *   (objects containing arrays grouped by names)
  */
-export default function run({ provider = 'saucelabs', browsers, code, credentials } = {}) {
+export default function run({
+  provider = 'saucelabs',
+  browsers,
+  code = '',
+  credentials,
+  verbose = false,
+  timeout = 1000
+} = {}) {
   if (!providers.hasOwnProperty(provider)) {
     throw new Error(`Provider "${provider}" is not available. Use one of those: ${Object.keys(providers).join(',')}`);
   }
@@ -53,17 +76,16 @@ export default function run({ provider = 'saucelabs', browsers, code, credential
   .map(({ test, browser }) =>
     () =>
       Promise.resolve()
-      .then(print(`started ${browser.name}`))
+      .then(print(`started testing session in browser ${browser.name}`))
       .then(test.enter())
-      .then(print('entered'))
+      .then(print('connected'))
       // we need very simple page always available online
       .then(test.open('about:blank'))
-      .then(print('page opened'))
       .then(test.execute(code))
       .then(print('code executed'))
        // wait a while for script execution; later on some callback-based
        // solution should be used
-      .then(test.sleep(1000))
+      .then(test.sleep(timeout))
       .then(() =>
         Promise.all([
           call(test.getResults())
@@ -76,7 +98,6 @@ export default function run({ provider = 'saucelabs', browsers, code, credential
           logs
         }))
       )
-      .then(print('results and logs gathered'))
       .then(
         // quit no matter if test succeed or not
         andReturn(test.quit()),
@@ -93,7 +114,7 @@ export default function run({ provider = 'saucelabs', browsers, code, credential
           logs: []
         };
       })
-      .then(print('quited'))
+      .then(print('testing session finished'))
   );
 
   // run all tests with some concurrency
@@ -107,9 +128,9 @@ export default function run({ provider = 'saucelabs', browsers, code, credential
         }, {})
       )
     );
-}
-
-
-function print(message) {
-  return andReturn(() => Promise.resolve(console.log(message)));
+    
+  
+  function print(message) {
+    return andReturn(() => Promise.resolve(verbose ? console.log(message) : 0));
+  }
 }
