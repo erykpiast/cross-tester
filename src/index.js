@@ -8,12 +8,10 @@ import {
 import { concurrent, andReturn, andThrow, call } from './promises-util';
 import parseBrowsers from './parse-browsers';
 import * as SauceLabs from './providers/saucelabs';
-import * as BrowserStack from './providers/browserstack';
 
 
 const providers = {
-  [SauceLabs.name]: SauceLabs,
-  [BrowserStack.name]: BrowserStack
+  [SauceLabs.name]: SauceLabs
 };
 
 /**
@@ -23,7 +21,7 @@ const providers = {
  *
  * @param
  */
-export default function run({ provider, browsers, code, credentials } = {}) {
+export default function run({ provider = 'saucelabs', browsers, code, credentials } = {}) {
   if (!providers.hasOwnProperty(provider)) {
     throw new Error(`Provider "${provider}" is not available. Use one of those: ${Object.keys(providers).join(',')}`);
   }
