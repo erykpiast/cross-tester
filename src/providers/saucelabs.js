@@ -100,7 +100,8 @@ const ignoredLogs = [
   'unrecognized command line flag',
   'Only application manifests may use',
   'Get a connection to permissions.sqlite.',
-  'DB table(moz_perms) is created'
+  'DB table(moz_perms) is created',
+  'Browser.SelfSupportBackend'
 ];
 
 const RESULTS_ARRAY_NAME = 'window.__results__';
