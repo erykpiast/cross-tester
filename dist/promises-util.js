@@ -7,6 +7,7 @@ exports.chain = chain;
 exports.concurrent = concurrent;
 exports.andReturn = andReturn;
 exports.andThrow = andThrow;
+exports.call = call;
 
 var _bluebird = require('bluebird');
 
@@ -91,7 +92,7 @@ function concurrent(fns, limit) {
 
 /**
  * @function andReturn - creates function that calls passed function with its
- *   argument and returns the argument
+ *   argument and returns the argument when promise returned by it is fulfilled
  * @access pubilc
  *
  * @param {Function} fn
@@ -100,14 +101,17 @@ function concurrent(fns, limit) {
  */
 function andReturn(fn) {
   return function (data) {
-    fn(null, data);
-    return data;
+    return fn(null, data).then(function () {
+      return data;
+    }, function () {
+      return data;
+    });
   };
 }
 
 /**
  * @function andThrow - creates function that calls passed function with its
- *   argument and throws the argument
+ *   argument and throws the argument when promise returned by it is fulfilled
  * @access pubilc
  *
  * @param {Function} fn
@@ -116,7 +120,27 @@ function andReturn(fn) {
  */
 function andThrow(fn) {
   return function (err) {
-    fn(err);
-    return err;
+    return fn(err).then(function () {
+      throw err;
+    }, function () {
+      throw err;
+    });
   };
+}
+
+/**
+ * @function call - simply calls provided function
+ * @access pubilc
+ *
+ * @param {Function} fn
+ * @param {*} [...args]- 
+ *
+ * @return {Function}
+ */
+function call(fn) {
+  for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+    args[_key - 1] = arguments[_key];
+  }
+
+  return fn.apply(undefined, args);
 }

@@ -1,6 +1,6 @@
 'use strict';
 
-var _providers;
+var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -19,32 +19,50 @@ var _saucelabs = require('./providers/saucelabs');
 
 var SauceLabs = _interopRequireWildcard(_saucelabs);
 
-var _browserstack = require('./providers/browserstack');
-
-var BrowserStack = _interopRequireWildcard(_browserstack);
-
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var providers = (_providers = {}, _defineProperty(_providers, SauceLabs.name, SauceLabs), _defineProperty(_providers, BrowserStack.name, BrowserStack), _providers);
+var providers = _defineProperty({}, SauceLabs.name, SauceLabs);
 
 /**
  * @function run
  * @access public
  * @description runs code in each of provided browsers
+ * 
+ * @param {Object} config
+ *   @property {Object} credentials
+ *     @property {String} userName
+ *     @property {String} accessToken
+ *   @property {Object} browsers - see documentation for input of parse-browsers
+ *     function
+ *   @property {String} [provider='saucelabs']
+ *   @property {String} [code] - valid JS code
+ *   @property {Boolean} [verbose=false] - if true, prints logs about testing
+ *     progress to console
+ *   @property {Number} [timeout=1000] - how long to wait before gathering
+ *     results (after executing code)
+ *   @property {String} [url=http://blank.org] - page to open; by default it's
+ *     blank, but you may wish to use some JSBin instead of providing the code
  *
- * @param
+ * @return {Promise<Object>} collection of results and logs for each browser
+ *   (objects containing arrays grouped by names)
  */
 function run() {
   var _ref = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
-  var provider = _ref.provider;
+  var _ref$provider = _ref.provider;
+  var provider = _ref$provider === undefined ? 'saucelabs' : _ref$provider;
   var browsers = _ref.browsers;
-  var code = _ref.code;
+  var _ref$code = _ref.code;
+  var code = _ref$code === undefined ? '' : _ref$code;
   var credentials = _ref.credentials;
+  var _ref$verbose = _ref.verbose;
+  var verbose = _ref$verbose === undefined ? false : _ref$verbose;
+  var _ref$timeout = _ref.timeout;
+  var timeout = _ref$timeout === undefined ? 1000 : _ref$timeout;
 
   if (!providers.hasOwnProperty(provider)) {
     throw new Error('Provider "' + provider + '" is not available. Use one of those: ' + Object.keys(providers).join(','));
@@ -62,7 +80,7 @@ function run() {
 
   var _providers$provider = providers[provider];
   var createTest = _providers$provider.createTest;
-  var concurrencyLimit = _providers$provider.concurrencyLimit;
+  var getConcurrencyLimit = _providers$provider.getConcurrencyLimit;
   var userName = credentials.userName;
   var accessToken = credentials.accessToken;
 
@@ -79,13 +97,17 @@ function run() {
     var test = _ref2.test;
     var browser = _ref2.browser;
     return function () {
-      return Promise.resolve()
+      return Promise.resolve().then(print('started testing session in browser ' + browser.name)).then(test.enter()).then(print('connected'))
       // we need very simple page always available online
-      .then(test.open('http://blank.org/')).then(test.execute(code))
+      .then(test.open('about:blank')).then(test.execute(code)).then(print('code executed'))
       // wait a while for script execution; later on some callback-based
       // solution should be used
-      .then(test.sleep(1000)).then(function () {
-        return Promise.all([test.getResults(), test.getBrowserLogs()]).then(function (results, logs) {
+      .then(test.sleep(timeout)).then(function () {
+        return Promise.all([(0, _promisesUtil.call)(test.getResults()).then(print('results gathered')), (0, _promisesUtil.call)(test.getBrowserLogs()).then(print('logs gathered'))]).then(function (_ref3) {
+          var _ref4 = _slicedToArray(_ref3, 2);
+
+          var results = _ref4[0];
+          var logs = _ref4[1];
           return {
             browser: browser.name,
             results: results,
@@ -94,28 +116,41 @@ function run() {
         });
       }).then(
       // quit no matter if test succeed or not
-      (0, _promisesUtil.andReturn)(function () {
-        return test.quit();
-      }), (0, _promisesUtil.andThrow)(function () {
-        return test.quit();
-      })).catch(function (err) {
-        // suppress any error,
-        // we want to continue tests in other browsers
-        console.error(err);
-      });
+      (0, _promisesUtil.andReturn)(test.quit()), (0, _promisesUtil.andThrow)(test.quit())).catch(function (err) {
+        // suppress any error
+        // we don't want to break a chain, but continue tests in other browsers
+        return {
+          browser: browser.name,
+          results: [{
+            type: 'FAIL',
+            message: err.message
+          }],
+          logs: []
+        };
+      }).then(print('testing session finished'));
     };
   });
 
   // run all tests with some concurrency
-  return (0, _promisesUtil.concurrent)(testingSessions, concurrencyLimit).then(function (resultsForAllTests) {
-    return resultsForAllTests.reduce(function (map, _ref3) {
-      var browser = _ref3.browser;
-      var results = _ref3.results;
-      var logs = _ref3.logs;
+  return getConcurrencyLimit(userName, accessToken).then(function (concurrencyLimit) {
+    return (0, _promisesUtil.concurrent)(testingSessions, concurrencyLimit).then(function (resultsForAllTests) {
+      return resultsForAllTests.reduce(function (map) {
+        var _ref5 = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
-      map[browser] = { results: results, logs: logs };
+        var browser = _ref5.browser;
+        var results = _ref5.results;
+        var logs = _ref5.logs;
 
-      return map;
-    }, {});
+        map[browser] = { results: results, logs: logs };
+
+        return map;
+      }, {});
+    });
   });
+
+  function print(message) {
+    return (0, _promisesUtil.andReturn)(function () {
+      return Promise.resolve(verbose ? console.log(message) : 0);
+    });
+  }
 }

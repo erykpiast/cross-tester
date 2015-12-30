@@ -3,7 +3,8 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.concurrencyLimit = exports.name = undefined;
+exports.name = undefined;
+exports.getConcurrencyLimit = getConcurrencyLimit;
 exports.createTest = createTest;
 
 var _wd = require('wd');
@@ -15,6 +16,10 @@ var _bluebird = require('bluebird');
 var _bluebird2 = _interopRequireDefault(_bluebird);
 
 var _url = require('url');
+
+var _requestPromise = require('request-promise');
+
+var _requestPromise2 = _interopRequireDefault(_requestPromise);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -54,7 +59,7 @@ var ignoredLogs = [
 // CSS related
 'Declaration dropped', 'Ruleset ignored due to bad selector', 'Expected declaration but found', 'Expected media feature name but found', 'Unrecognized at-rule', 'Keyframe rule ignored due to bad selector',
 // addons stuff
-'Could not read chrome manifest', 'blocklist is disabled', 'Trying to re-register CID', 'chrome-extension://', 'resource://', 'Native module at path', 'Failed to load native module at path', 'Component returned failure code',
+'Could not read chrome manifest', 'blocklist is disabled', 'Trying to re-register CID', 'chrome-extension://', 'resource://', 'Native module at path', 'Failed to load native module at path', 'Component returned failure code', 'While registering XPCOM module',
 // Facebook script
 'Invalid App Id: Must be a number or numeric string representing the application id.', 'The "fb-root" div has not been created, auto-creating', 'FB.getLoginStatus() called before calling FB.init().', 'FB.init has already been called - this could indicate a problem',
 // SalesManago
@@ -62,11 +67,11 @@ var ignoredLogs = [
 // Qualtrics
 'Please remove it from your site or contact your Qualtrics Administrator',
 // just useless here
-'server does not support RFC 5746, see CVE-2009-3555', 'Mixed Content', 'downloadable font', 'Unexpected end of file while searching for end of @media, @supports or @-moz-document rule', 'Blocked loading mixed active content', 'The character encoding of the HTML document was not declared', 'A call to document.write() from an asynchronously-loaded external script was ignored', 'Failed to execute \'write\' on \'Document\'', 'Password fields present on an insecure (http://) page', 'Password fields present in a form with an insecure (http://) form action', 'WebGL: Error during native OpenGL init', 'WebGL: WebGL creation failed', 'to start media query expression but found', 'The page was reloaded, because the character encoding declaration of the HTML document was not found when prescanning the first 1024 bytes of the file', 'Refused to set unsafe header', 'The character encoding of a framed document was not declared', 'While creating services from category', 'unrecognized command line flag'];
+'server does not support RFC 5746, see CVE-2009-3555', 'Mixed Content', 'downloadable font', 'Unexpected end of file while searching for end of @media, @supports or @-moz-document rule', 'Blocked loading mixed active content', 'The character encoding of the HTML document was not declared', 'A call to document.write() from an asynchronously-loaded external script was ignored', 'Failed to execute \'write\' on \'Document\'', 'Password fields present on an insecure (http://) page', 'Password fields present in a form with an insecure (http://) form action', 'WebGL: Error during native OpenGL init', 'WebGL: WebGL creation failed', 'to start media query expression but found', 'The page was reloaded, because the character encoding declaration of the HTML document was not found when prescanning the first 1024 bytes of the file', 'Refused to set unsafe header', 'The character encoding of a framed document was not declared', 'While creating services from category', 'unrecognized command line flag', 'Only application manifests may use', 'Get a connection to permissions.sqlite.', 'DB table(moz_perms) is created', 'Browser.SelfSupportBackend'];
 
 var RESULTS_ARRAY_NAME = 'window.__results__';
 
-var DEFAULT_TIMEOUT = 30 * 1000;
+var DEFAULT_TIMEOUT = 60 * 1000;
 var chromeLogMessagePattern = /^(javascript|(?:(?:https?|chrome-extension)\:\/\/\S+))\s+(\d+:\d+)\s+(.*)$/i;
 var firefoxAddonLogPattern = /^(\d{13})\t(\S*(?:addons|extensions)\S*)\t([A-Z]+)\t(.*)\n?$/i;
 var androidEmulatorLogMessagePattern = /^\[([0-9\-\A-Z:]+)\](?:\s+\[[A-Z]+\]\s+[A-Z]{1}\/[a-z0-9\/\._]+\s*(?:\[[^\]]+\])?\(\s+\d+\)\:\s+)?(?:\-+\s+beginning\s+of\s+[a-z]+)?(.*)$/i;
@@ -74,7 +79,27 @@ var androidEmulatorLogBrowserMessagePattern = /^\[([0-9\-\A-Z:]+)\]\s+\[[A-Z]+\]
 
 var name = exports.name = 'saucelabs';
 
-var concurrencyLimit = exports.concurrencyLimit = 8;
+/**
+ * @function getConcurrencyLimit - returns concurrency limit for the account
+ *
+ * @param {String} userName
+ * @param {String} accessToken
+ *
+ * @return {Promise<Number>} number of available concurrent VMs for the account
+ */
+function getConcurrencyLimit(userName, accessToken) {
+  var API_ROOT = 'https://saucelabs.com/rest/v1/';
+  return (0, _requestPromise2.default)(API_ROOT + ('users/' + userName + '/concurrency'), {
+    auth: {
+      user: userName,
+      pass: accessToken,
+      sendImmediately: false
+    }
+  }).then(function (res) {
+    var parsed = JSON.parse(res);
+    return parseInt(parsed.concurrency[userName].remaining.mac, 0);
+  });
+}
 
 function createTest(browser, userName, accessToken) {
   var driver = undefined;
@@ -83,7 +108,12 @@ function createTest(browser, userName, accessToken) {
 
   function enter() {
     return function () {
-      driver = _wd2.default.promiseRemote('ondemand.saucelabs.com', 80, userName, accessToken);
+      driver = _wd2.default.remote({
+        hostname: 'ondemand.saucelabs.com',
+        port: 80,
+        user: userName,
+        pwd: accessToken
+      }, 'promise');
 
       // maybe we can use this?
       // wd.configureHttp({
@@ -92,7 +122,7 @@ function createTest(browser, userName, accessToken) {
       //   retryDelay: 100
       // });
       return _bluebird2.default.race([_bluebird2.default.delay(DEFAULT_TIMEOUT).then(function () {
-        throw new Error('cannot connect to SauceLabs in 10 seconds');
+        throw new Error('cannot connect to SauceLabs in ' + DEFAULT_TIMEOUT + ' seconds');
       }), driver.init(browser).then(function (_session_) {
         return _session_[1];
       }, function (err) {
@@ -180,7 +210,7 @@ function createTest(browser, userName, accessToken) {
               }
             }
 
-            // try to parse custom logs from TaniaKsiazka.pl
+            // try to parse custom logs where message is stringified object
             var parsed = undefined;
             try {
               parsed = JSON.parse(log.message);
@@ -188,7 +218,7 @@ function createTest(browser, userName, accessToken) {
 
             if (parsed && 'object' === _typeof(parsed.message) && parsed.message !== null) {
               return {
-                timestamp: Math.random(parsed.message.timestamp * 1000),
+                timestamp: Math.round(parsed.message.timestamp * 1000),
                 level: parsed.message.level,
                 file: _formatUrl(parsed.message.url),
                 line: parsed.message.line + ':' + parsed.message.column,
@@ -212,8 +242,12 @@ function createTest(browser, userName, accessToken) {
   }
 
   function getResults() {
+    // it more safe to send stringified results through WD and parse it here
+    // ex. MS Edge likes return arrays as object with numeric keys
     return function () {
-      return driver.execute('return ' + RESULTS_ARRAY_NAME + ';');
+      return driver.execute('return JSON.stringify(' + RESULTS_ARRAY_NAME + ');').then(function (json) {
+        return JSON.parse(json);
+      });
     };
   }
 
@@ -232,7 +266,7 @@ function createTest(browser, userName, accessToken) {
   function open(url) {
     return function () {
       return _bluebird2.default.race([_bluebird2.default.delay(DEFAULT_TIMEOUT).then(function () {
-        throw new Error('cannot open page ' + url + ' in 10 seconds');
+        throw new Error('cannot open page ' + url + ' in ' + DEFAULT_TIMEOUT + ' seconds');
       }), driver.get(url).then(execute(RESULTS_ARRAY_NAME + ' = [];'))]);
     };
   }
