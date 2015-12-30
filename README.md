@@ -11,7 +11,7 @@ import runCode from 'cross-tester';
 runCode({
   code: myCode,
   credentials: {
-    userName: 'myUserNameOnSauceLabs`,
+    userName: 'myUserNameOnSauceLabs',
     accessToken: 'myAccessTokenToSauceLabsAccount'
   },
   // use configurator (https://wiki.saucelabs.com/display/DOCS/Platform+Configurator#/)
