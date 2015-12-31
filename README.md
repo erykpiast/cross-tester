@@ -68,11 +68,6 @@ service of your choice with `-p` parameter, user and access token with
 list of browsers with `-b` (the last one has to be valid JSON object, so I
 recommend to simply edit executable file). Full-featured CLI program is coming!
 
-<<<<<<< HEAD
 ## Notes
 Mobile browsers on BrowserStack doesn't work really well. It seems like issue of
 the service, but maybe can be resolved on client side. Help is appreciated.
-=======
-## BrowserStack?
-Support in progress.
->>>>>>> Update README.md
