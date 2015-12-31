@@ -63,7 +63,7 @@ runCode({
 It's also possible to use simple CLI interface. You can find it as `cross-tester`
 in your path after installing the package globally (or inside `./node_modules/.bin`
 directory in case of local installation). Provide user and access token with
-`-u` and `-a` parameters (those are only required parameters), code with `-c` and
+`-u` and `-a` parameters (those are only required ones), code with `-c` and
 list of browsers with `-b` (the last one has to be valid JSON object, so I
 recommend to simply edit executable file). Full-featured CLI program is coming!
 
