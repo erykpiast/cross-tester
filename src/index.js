@@ -27,7 +27,7 @@ const providers = {
  *     @property {String} accessToken
  *   @property {Object} browsers - see documentation for input of parse-browsers
  *     function
- *   @property {String} [provider='saucelabs']
+ *   @property {String} provider - "saucelabs" or "browserstack"
  *   @property {String} [code] - valid JS code
  *   @property {Boolean} [verbose=false] - if true, prints logs about testing
  *     progress to console
@@ -40,10 +40,10 @@ const providers = {
  *   (objects containing arrays grouped by names)
  */
 export default function run({
-  provider = 'saucelabs',
+  provider,
   browsers,
-  code = '',
   credentials,
+  code = '',
   verbose = false,
   timeout = 1000
 } = {}) {
