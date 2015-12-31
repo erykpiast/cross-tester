@@ -18,7 +18,7 @@
     "precompile": "rm -rf dist/ && mkdir -p dist",
     "compile": "babel -d dist/ src/ --presets es2015,stage-0,stage-1,stage-2,stage-3",
     "prepublish": "git checkout master && npm run compile",
-    "postpublish": "git add dist/ && git commit -m 'Build dist/' dist/ && git push origin master --tags",
+    "postpublish": "git add dist/; git commit -m 'Build dist/' dist/; git push origin master --tags",
     "release-patch": "npm version patch && npm publish --access=public",
     "release-minor": "npm version minor && npm publish --access=public",
     "release-major": "npm version major && npm publish --access=public"
