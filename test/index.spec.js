@@ -22,6 +22,7 @@ import { default as run, __RewireAPI__ as RewireAPI } from '../src/index';
 RewireAPI.__Rewire__('providers', {
   test: {
     getConcurrencyLimit: () => Promise.resolve(1),
+    parseBrowser: (browser, browserName) => assign({ displayName: browserName }, browser),
     createTest: createTestMock
   }
 });
@@ -148,8 +149,8 @@ suite('creating test sessions', () => {
     run(VALID_CONFIG).then((results) => {
       assert.equal(Object.keys(results).length, 3, 'as many results as browsers');
       assert.sameMembers(Object.keys(results), [
-        'Chrome',
-        'Firefox',
+        'Chrome 40',
+        'Firefox 38',
         'iPhone 8.1'
       ], `results named like browsers`);
       done();
@@ -182,8 +183,8 @@ suite('error handling', () => {
     run(VALID_CONFIG).then((results) => {
       assert.equal(Object.keys(results).length, 3, 'as many results as browsers');
       assert.sameMembers(Object.keys(results), [
-        'Chrome',
-        'Firefox',
+        'Chrome 40',
+        'Firefox 38',
         'iPhone 8.1'
       ], `results named like browsers`);
       done();
@@ -211,8 +212,8 @@ suite('error handling', () => {
 
   test('saving information about test fail', (done) => {
     run(VALID_CONFIG).then((results) => {
-      assert.lengthOf(results.Chrome.results, 1);
-      assert.equal(results.Chrome.results[0].type, 'FAIL');
+      assert.lengthOf(results['Chrome 40'].results, 1);
+      assert.equal(results['Chrome 40'].results[0].type, 'FAIL');
       done();
     });
 

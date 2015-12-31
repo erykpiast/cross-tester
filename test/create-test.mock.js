@@ -38,14 +38,18 @@ export const mock = chai.spy(function createTest(browser) {
 function mockMethod(exports, name, returned) {
   const index = returned[name] = returned.hasOwnProperty(name) ? returned[name] + 1 : 0;
   exports[name] = chai.spy(() => {
-    const returnedValue = chai.spy(() => new Promise((resolve, reject) => {
-      returned.push({
-        resolve,
-        reject,
-        name,
-        index
+    // console.log(`method ${name} called`);
+    const returnedValue = chai.spy(() => {
+      // console.log(`function returned by ${name} called`);
+      return new Promise((resolve, reject) => {
+        returned.push({
+          resolve,
+          reject,
+          name,
+          index
+        });
       });
-    }));
+    });
 
     exports[name].returned.push(returnedValue);
 

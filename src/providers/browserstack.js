@@ -162,9 +162,9 @@ export function createTest(browser, userName, accessToken) {
       driver = new webdriver.Builder()
         .usingServer('http://hub.browserstack.com/wd/hub')
         .withCapabilities(extend({}, browser, {
-            'browserstack.user': userName,
-            'browserstack.key' : accessToken,
-            'loggingPrefs': { 'browser': 'ALL' },
+          'browserstack.user': userName,
+          'browserstack.key': accessToken,
+          'loggingPrefs': { 'browser': 'ALL' },
         }))
         .build();
 

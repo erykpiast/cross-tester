@@ -126,13 +126,13 @@ export default function run({
   // run all tests with some concurrency
   return getConcurrencyLimit(userName, accessToken).then((concurrencyLimit) =>
     concurrent(testingSessions, concurrencyLimit)
-      .then((resultsForAllTests) =>
-        resultsForAllTests.reduce((map, { browser, results, logs } = {}) => {
+      .then((resultsForAllTests) => {
+        return resultsForAllTests.reduce((map, { browser, results, logs } = {}) => {
           map[browser] = { results, logs };
 
           return map;
-        }, {})
-      )
+        }, {});
+      })
     );
 
 
