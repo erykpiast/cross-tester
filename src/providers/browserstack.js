@@ -1,8 +1,9 @@
-import webdriver from 'wd';
+import webdriver from 'browserstack-webdriver';
 // it's soo cool to override globals! (yes, Promise is one for some time)
 import Promise from 'bluebird';
 import { parse as parseUrl } from 'url';
 import request from 'request-promise';
+import { extend } from 'lodash';
 
 
 const levels = {
@@ -67,7 +68,6 @@ const ignoredLogs = [
   'Failed to load native module at path',
   'Component returned failure code',
   'While registering XPCOM module',
-  'addons.xpi:',
   // Facebook script
   'Invalid App Id: Must be a number or numeric string representing the application id.',
   'The "fb-root" div has not been created, auto-creating',
@@ -107,14 +107,14 @@ const ignoredLogs = [
 
 const RESULTS_ARRAY_NAME = 'window.__results__';
 
-const DEFAULT_TIMEOUT = 60 * 1000;
+const DEFAULT_TIMEOUT = 120 * 1000;
 const chromeLogMessagePattern = /^(javascript|(?:(?:https?|chrome-extension)\:\/\/\S+))\s+(\d+:\d+)\s+(.*)$/i;
 const firefoxAddonLogPattern = /^(\d{13})\t(\S*(?:addons|extensions)\S*)\t([A-Z]+)\t(.*)\n?$/i;
 const androidEmulatorLogMessagePattern = /^\[([0-9\-\A-Z:]+)\](?:\s+\[[A-Z]+\]\s+[A-Z]{1}\/[a-z0-9\/\._]+\s*(?:\[[^\]]+\])?\(\s+\d+\)\:\s+)?(?:\-+\s+beginning\s+of\s+[a-z]+)?(.*)$/i;
 const androidEmulatorLogBrowserMessagePattern = /^\[([0-9\-\A-Z:]+)\]\s+\[[A-Z]+\]\s+I\/chromium\(\s+\d+\)\:\s+\[([A-Z]+)\:CONSOLE\(\d+\)\]\s+\"(.*)",\s+source\:\s+(\S*)\s+\((\d+)\)$/i;
 
 
-export const name = 'saucelabs';
+export const name = 'browserstack';
 
 /**
  * @function getConcurrencyLimit - returns concurrency limit for the account
@@ -125,8 +125,8 @@ export const name = 'saucelabs';
  * @return {Promise<Number>} number of available concurrent VMs for the account
  */
 export function getConcurrencyLimit(userName, accessToken) {
-  const API_ROOT = 'https://saucelabs.com/rest/v1/';
-  return request(API_ROOT + `users/${userName}/concurrency`, {
+  const API_ROOT = 'https://www.browserstack.com/';
+  return request(API_ROOT + `automate/plan.json`, {
     auth: {
       user: userName,
       pass: accessToken,
@@ -134,7 +134,7 @@ export function getConcurrencyLimit(userName, accessToken) {
     }
   }).then((res) => {
     const parsed = JSON.parse(res);
-    return parseInt(parsed.concurrency[userName].remaining.mac, 0);
+    return parseInt(parsed.parallel_sessions_max_allowed, 0);
   });
 }
 
@@ -156,14 +156,30 @@ export function createTest(browser, userName, accessToken) {
   let browserLogs = [];
   let browserLogsGot = 0;
 
+
   function enter() {
     return () => {
-      driver = webdriver.remote({
-        hostname: 'ondemand.saucelabs.com',
-        port: 80,
-        user: userName,
-        pwd: accessToken
-      }, 'promise');
+      driver = new webdriver.Builder()
+        .usingServer('http://hub.browserstack.com/wd/hub')
+        .withCapabilities(extend({}, browser, {
+            'browserstack.user': userName,
+            'browserstack.key' : accessToken,
+            'loggingPrefs': { 'browser': 'ALL' },
+        }))
+        .build();
+
+      return Promise.race([
+        Promise.delay(DEFAULT_TIMEOUT).then(() => {
+          throw new Error(`cannot connect to SauceLabs in ${DEFAULT_TIMEOUT} ms`);
+        }),
+        driver.session_.then((session) => session, (err) => {
+          if(err.message.match(/(Browser_Version not supported)|(Browser combination invalid)/)) {
+            throw new Error(`browser ${browser.browserName} ${browser.version} is not supported (${err.message})`);
+          } else {
+            throw err;
+          }
+        })
+      ]);
 
       // maybe we can use this?
       // wd.configureHttp({
@@ -171,21 +187,6 @@ export function createTest(browser, userName, accessToken) {
       //   retries: 3,
       //   retryDelay: 100
       // });
-      return Promise.race([
-        Promise.delay(DEFAULT_TIMEOUT).then(() => {
-          throw new Error(`cannot connect to SauceLabs in ${DEFAULT_TIMEOUT} ms`);
-        }),
-        driver.init(browser)
-        .then((_session_) => {
-          return _session_[1];
-        }, (err) => {
-          if(err.message.match(/(The environment you requested was unavailable)|(Browser combination invalid)/)) {
-            throw new Error(`browser ${browser.browserName} ${browser.version} is not supported (${err.message})`);
-          } else {
-            throw err;
-          }
-        })
-      ]);
     };
   }
 
@@ -205,23 +206,24 @@ export function createTest(browser, userName, accessToken) {
   function getBrowserLogs(levelName) {
     const level = ((levels[levelName] || { value: 0 }).value || levels.INFO.value);
 
-    return () => driver.logTypes().then(
-      (types) =>
-        (Array.isArray(types) && types.indexOf('browser') !== -1 ?
-          driver.log('browser') :
-          Promise.resolve([])
-        ),
-      () => [] // supress error
-    )
+    return () => new webdriver.WebDriver.Logs(driver)
+    .get('browser')
     .then((logs) =>
-      browserLogs = browserLogs.concat(logs)
+      browserLogs = browserLogs.concat(logs),
+      (err) => {
+        if (/Command not found|not implemented/.test(err.message)) {
+          return browserLogs;
+        }
+
+        throw err;
+      }
     ).then((logs) => {
       const notGot = logs.slice(browserLogsGot);
 
       browserLogsGot = logs.length;
 
       return notGot.filter((log) =>
-        levels[log.level].value >= level
+        levels[log.level.name].value >= level
       );
     })
     .then((logs) =>
@@ -302,13 +304,13 @@ export function createTest(browser, userName, accessToken) {
   function getResults() {
     // it more safe to send stringified results through WD and parse it here
     // ex. MS Edge likes return arrays as object with numeric keys
-    return () => driver.execute(`return JSON.stringify(${RESULTS_ARRAY_NAME});`)
+    return () => driver.executeScript(`return JSON.stringify(${RESULTS_ARRAY_NAME});`)
       .then((json) => JSON.parse(json));
   }
 
 
   function execute(code) {
-    return () => driver.safeExecute(code);
+    return () => driver.executeScript(code);
   }
 
 
@@ -368,34 +370,38 @@ export function createTest(browser, userName, accessToken) {
  */
 export function parseBrowser(browser, displayName) {
   const browserName = ({
-    'microsoft edge': 'MicrosoftEdge',
-    'edge': 'MicrosoftEdge',
-    'ie': 'internet explorer',
+    'microsoft edge': 'Edge',
+    'edge': 'Edge',
+    'ie': 'IE',
+    'internet explorer': 'IE',
     'google chrome': 'chrome',
     'mozilla firefox': 'firefox',
     'ff': 'firefox'
   })[browser.name.toLowerCase()] || browser.name;
 
   const osName = ({
-    'mac': 'OS X'
+    'mac': 'OS X',
+    'android': 'ANDROID',
+    'ios': 'MAC'
   })[browser.os.toLowerCase()] || browser.os;
 
   const osVersion = (({
     'OS X': {
-      'Snow Leopard': '10.6',
-      'Lion': '10.7',
-      'Mountain Lion': '10.8',
-      'Mavericks': '10.9',
-      'Yosemite': '10.10',
-      'El Capitan': '10.11'
+      '10.6': 'Snow Leopard',
+      '10.7': 'Lion',
+      '10.8': 'Mountain Lion',
+      '10.9': 'Mavericks',
+      '10.10': 'Yosemite',
+      '10.11': 'El Capitan'
     }
   })[osName] || {})[browser.osVersion.toLowerCase()] || browser.osVersion;
 
   return {
     name: `CrossTester - ${displayName}`,
-    browserName: browserName,
-    version: browser.version,
-    platform: osName + (browser.hasOwnProperty('osVersion') && ('undefined' !== typeof osVersion) ? ` ${osVersion}` : ''),
+    browser: browserName,
+    browser_version: browser.version,
+    os: osName,
+    os_version: osVersion,
     device: browser.device
   };
 }

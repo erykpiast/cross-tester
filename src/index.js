@@ -8,17 +8,19 @@ import {
 import { concurrent, andReturn, andThrow, call } from './promises-util';
 import parseBrowsers from './parse-browsers';
 import * as SauceLabs from './providers/saucelabs';
+import * as BrowserStack from './providers/browserstack';
 
 
 const providers = {
-  [SauceLabs.name]: SauceLabs
+  [SauceLabs.name]: SauceLabs,
+  [BrowserStack.name]: BrowserStack
 };
 
 /**
  * @function run
  * @access public
  * @description runs code in each of provided browsers
- * 
+ *
  * @param {Object} config
  *   @property {Object} credentials
  *     @property {String} userName
@@ -62,21 +64,25 @@ export default function run({
 
   const parsed = parseBrowsers(browsers);
 
-  const { createTest, getConcurrencyLimit } = providers[provider];
+  const { createTest, getConcurrencyLimit, parseBrowser } = providers[provider];
   const { userName, accessToken } = credentials;
 
   // define tests for all the websites in all browsers (from current config file)
   const testingSessions = Object.keys(parsed)
-  .map((browserName) => ({
-    test: createTest(parsed[browserName], userName, accessToken),
-    browser: extend({
-      name: browserName
-    }, parsed[browserName])
-  }))
+  .map((browserName) => {
+    const browserConfig = extend(parseBrowser(parsed[browserName], browserName), {
+      displayName: browserName
+    });
+
+    return {
+      test: createTest(browserConfig, userName, accessToken),
+      browser: browserConfig
+    };
+  })
   .map(({ test, browser }) =>
     () =>
       Promise.resolve()
-      .then(print(`started testing session in browser ${browser.name}`))
+      .then(print(`starting testing session in browser ${browser.displayName}`))
       .then(test.enter())
       .then(print('connected'))
       // we need very simple page always available online
@@ -93,7 +99,7 @@ export default function run({
           call(test.getBrowserLogs())
             .then(print('logs gathered'))
         ]).then(([results, logs]) => ({
-          browser: browser.name,
+          browser: browser.displayName,
           results,
           logs
         }))
@@ -106,7 +112,7 @@ export default function run({
         // suppress any error
         // we don't want to break a chain, but continue tests in other browsers
         return {
-          browser: browser.name,
+          browser: browser.displayName,
           results: [{
             type: 'FAIL',
             message: err.message
@@ -114,7 +120,7 @@ export default function run({
           logs: []
         };
       })
-      .then(print('testing session finished'))
+      .then(print(`testing session in browser ${browser.displayName} finished`))
   );
 
   // run all tests with some concurrency
@@ -128,8 +134,8 @@ export default function run({
         }, {})
       )
     );
-    
-  
+
+
   function print(message) {
     return andReturn(() => Promise.resolve(verbose ? console.log(message) : 0));
   }
