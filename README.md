@@ -69,4 +69,3 @@ recommend to simply edit executable file). Full-featured CLI program is coming!
 
 ## BrowserStack?
 Support in progress.
-g
