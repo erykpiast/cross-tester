@@ -79,10 +79,16 @@ export default function run({
       browser: browserConfig
     };
   })
-  .map(({ test, browser }) =>
-    () =>
+  .map(({ test, browser }) => {
+    const browserName = browser.displayName;
+
+    function print(message) {
+      return andReturn(() => Promise.resolve(verbose ? console.log(`${browserName} - ${message}`) : 0));
+    }
+
+    return () =>
       Promise.resolve()
-      .then(print(`starting testing session in browser ${browser.displayName}`))
+      .then(print('starting'))
       .then(test.enter())
       .then(print('connected'))
       // we need very simple page always available online
@@ -99,7 +105,7 @@ export default function run({
           call(test.getBrowserLogs())
             .then(print('logs gathered'))
         ]).then(([results, logs]) => ({
-          browser: browser.displayName,
+          browser: browserName,
           results,
           logs
         }))
@@ -112,7 +118,7 @@ export default function run({
         // suppress any error
         // we don't want to break a chain, but continue tests in other browsers
         return {
-          browser: browser.displayName,
+          browser: browserName,
           results: [{
             type: 'FAIL',
             message: err.message
@@ -120,8 +126,8 @@ export default function run({
           logs: []
         };
       })
-      .then(print(`testing session in browser ${browser.displayName} finished`))
-  );
+      .then(print('finished'));
+  });
 
   // run all tests with some concurrency
   return getConcurrencyLimit(userName, accessToken).then((concurrencyLimit) =>
@@ -134,9 +140,4 @@ export default function run({
         }, {});
       })
     );
-
-
-  function print(message) {
-    return andReturn(() => Promise.resolve(verbose ? console.log(message) : 0));
-  }
 }

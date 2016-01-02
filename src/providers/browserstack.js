@@ -4,6 +4,8 @@ import Promise from 'bluebird';
 import { parse as parseUrl } from 'url';
 import request from 'request-promise';
 import { assign } from 'lodash';
+import * as osVersionForBrowser from '../system-browsers';
+import { numberToName as osxVersions } from '../osx-versions';
 
 
 const levels = {
@@ -314,8 +316,19 @@ export function createTest(browser, userName, accessToken) {
   function getResults() {
     // it more safe to send stringified results through WD and parse it here
     // ex. MS Edge likes return arrays as object with numeric keys
-    return () => driver.executeScript(`return JSON.stringify(${RESULTS_ARRAY_NAME});`)
-      .then((json) => JSON.parse(json));
+    // on the other hand, strngification fails in IE 9, so we need a fallback
+    return () => driver.executeScript(`try {
+        return JSON.stringify(${RESULTS_ARRAY_NAME});
+      } catch(err) {
+        return ${RESULTS_ARRAY_NAME};
+      }`)
+      .then((jsonOrNot) => {
+        try {
+          return JSON.parse(jsonOrNot);
+        } catch(err) {
+          return jsonOrNot;
+        }
+      });
   }
 
 
@@ -407,20 +420,14 @@ export function parseBrowser(browser, displayName) {
     'ios': 'MAC'
   })[browser.os.toLowerCase()] || browser.os;
 
-  const osVersion = (({
-    'OS X': {
-      '10.6': 'Snow Leopard',
-      '10.7': 'Lion',
-      '10.8': 'Mountain Lion',
-      '10.9': 'Mavericks',
-      '10.10': 'Yosemite',
-      '10.11': 'El Capitan'
-    }
-  })[osName] || {})[browser.osVersion.toLowerCase()] || browser.osVersion;
+  let osVersion = osName === 'MAC' ?
+    osxVersions[browser.osVersion.toLowerCase()] :
+    browser.osVersion;
 
   let appium = false;
   let deviceName = (browser.device || '').toLowerCase();
   if ((browserName === 'Safari') && (['iphone', 'ipad'].indexOf((deviceName || '').split(' ')[0]) !== -1)) {
+    // Safari on iOS
     browserName = 'iPad';
     appium = true;
 
@@ -448,6 +455,7 @@ export function parseBrowser(browser, displayName) {
       }
     }
   } else if (browserName === 'Android') {
+    // Android Browser
     appium = true;
 
     // find device based on OS version
@@ -464,6 +472,21 @@ export function parseBrowser(browser, displayName) {
         '4': 'Google Nexus',
         'ice cream sandwich': 'Google Nexus'
       })[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
+    }
+  }
+
+  if (!osVersion) {
+    if ((osName === 'Windows') && (browserName === 'Internet Explorer')) {
+      osVersion = osVersionForBrowser.ie[browser.version];
+    }
+
+    if ((osName === 'Windows') && (browserName === 'MicrosoftEdge')) {
+      osVersion = osVersionForBrowser.edge[browser.version];
+    }
+
+    if ((osName === 'OS X') && (browserName === 'Safari')) {
+      osVersion = osVersionForBrowser.safari[browser.version];
+      osVersion = osxVersions[osVersion] || osVersion;
     }
   }
 

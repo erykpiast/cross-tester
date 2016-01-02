@@ -3,6 +3,8 @@ import webdriver from 'wd';
 import Promise from 'bluebird';
 import { parse as parseUrl } from 'url';
 import request from 'request-promise';
+import { assign } from 'lodash';
+import * as osVersionForBrowser from '../system-browsers';
 
 
 const levels = {
@@ -107,7 +109,7 @@ const ignoredLogs = [
 
 const RESULTS_ARRAY_NAME = 'window.__results__';
 
-const DEFAULT_TIMEOUT = 60 * 1000;
+const DEFAULT_TIMEOUT = 300 * 1000;
 const chromeLogMessagePattern = /^(javascript|(?:(?:https?|chrome-extension)\:\/\/\S+))\s+(\d+:\d+)\s+(.*)$/i;
 const firefoxAddonLogPattern = /^(\d{13})\t(\S*(?:addons|extensions)\S*)\t([A-Z]+)\t(.*)\n?$/i;
 const androidEmulatorLogMessagePattern = /^\[([0-9\-\A-Z:]+)\](?:\s+\[[A-Z]+\]\s+[A-Z]{1}\/[a-z0-9\/\._]+\s*(?:\[[^\]]+\])?\(\s+\d+\)\:\s+)?(?:\-+\s+beginning\s+of\s+[a-z]+)?(.*)$/i;
@@ -302,8 +304,19 @@ export function createTest(browser, userName, accessToken) {
   function getResults() {
     // it more safe to send stringified results through WD and parse it here
     // ex. MS Edge likes return arrays as object with numeric keys
-    return () => driver.execute(`return JSON.stringify(${RESULTS_ARRAY_NAME});`)
-      .then((json) => JSON.parse(json));
+    // on the other hand, strngification fails in IE 9, so we need a fallback
+    return () => driver.execute(`try {
+        return JSON.stringify(${RESULTS_ARRAY_NAME});
+      } catch(err) {
+        return ${RESULTS_ARRAY_NAME};
+      }`)
+      .then((jsonOrNot) => {
+        try {
+          return JSON.parse(jsonOrNot);
+        } catch(err) {
+          return jsonOrNot;
+        }
+      });
   }
 
 
@@ -367,20 +380,32 @@ export function createTest(browser, userName, accessToken) {
  *   @property {String} device
  */
 export function parseBrowser(browser, displayName) {
-  const browserName = ({
+  let browserName = ({
     'microsoft edge': 'MicrosoftEdge',
     'edge': 'MicrosoftEdge',
     'ie': 'internet explorer',
     'google chrome': 'chrome',
     'mozilla firefox': 'firefox',
-    'ff': 'firefox'
+    'ff': 'firefox',
+    'apple safari': 'Safari',
+    'ios safari': 'Safari',
+    'safari mobile': 'Safari',
+    'iphone': 'Safari',
+    'ipad': 'Safari',
+    'android browser': 'Android'
   })[browser.name.toLowerCase()] || browser.name;
 
-  const osName = ({
-    'mac': 'OS X'
+  let osName = ({
+    'win': 'Windows',
+    'windows': 'Windows',
+    'mac': 'OS X',
+    'os x': 'OS X',
+    'ios': 'iOS',
+    'android': 'Android',
+    'linux': 'Linux'
   })[browser.os.toLowerCase()] || browser.os;
 
-  const osVersion = (({
+  let osVersion = (({
     'OS X': {
       'Snow Leopard': '10.6',
       'Lion': '10.7',
@@ -391,11 +416,99 @@ export function parseBrowser(browser, displayName) {
     }
   })[osName] || {})[browser.osVersion.toLowerCase()] || browser.osVersion;
 
-  return {
-    name: `CrossTester - ${displayName}`,
-    browserName: browserName,
-    version: browser.version,
-    platform: osName + (browser.hasOwnProperty('osVersion') && ('undefined' !== typeof osVersion) ? ` ${osVersion}` : ''),
-    device: browser.device
+  let appium = false;
+  let appiumLegacy = false;
+  let deviceName = (browser.device || '').toLowerCase();
+  if ((browserName === 'Safari') && (['iphone', 'ipad'].indexOf((deviceName || '').split(' ')[0]) !== -1)) {
+    // Safari on iOS
+    osName = 'iOS';
+    appium = true;
+
+    if (deviceName === 'iphone') {
+      deviceName = 'iPhone Simulator';
+    }
+
+    if (deviceName === 'ipad') {
+      deviceName = 'iPad Simulator';
+    }
+  } else if (browserName === 'Android') {
+    // Android Browser
+    osName = 'Android';
+    appium = true;
+
+    // find device based on OS version
+    if (!deviceName) {
+      deviceName = 'Android Emulator';
+    }
+
+    if (!osVersion) {
+      osVersion = browser.version;
+    }
+
+    if (isNaN(parseFloat(osVersion, 10))) {
+      // find numeric version by name
+      osVersion = ({
+        'lolipop': '5.1',
+        'kitkat': '4.4',
+        'jelly bean': '4.3',
+        'ice cream sandwich': '4.0'
+      })[osVersion.toLowerCase()];
+    }
+
+    // for some reason platform is different for older Androids
+    if (parseFloat(osVersion, 10) < 4.4) {
+      appiumLegacy = true;
+    } else {
+      browserName = 'Browser';
+    }
+  }
+
+  const config = {
+    name: `CrossTester - ${displayName}`
   };
+
+  if (!osVersion) {
+    if ((osName === 'Windows') && (browserName === 'Internet Explorer')) {
+      osVersion = osVersionForBrowser.ie[browser.version];
+    }
+
+    if ((osName === 'Windows') && (browserName === 'MicrosoftEdge')) {
+      osVersion = osVersionForBrowser.edge[browser.version];
+    }
+
+    if ((osName === 'OS X') && (browserName === 'Safari')) {
+      osVersion = osVersionForBrowser.safari[browser.version];
+    }
+  }
+
+  if (appium) {
+    assign(config, {
+      browserName: browserName,
+      deviceOrientation: 'portrait',
+      deviceName
+    });
+
+    if (appiumLegacy) {
+      assign(config, {
+        platform: 'Linux',
+        version: osVersion
+      });
+    } else {
+      assign(config, {
+        platformName: osName,
+        platformVersion: osVersion,
+        appiumVersion: '1.4.16'
+      });
+    }
+  } else {
+    assign(config, {
+      browserName: browserName,
+      version: browser.version,
+      platform: osName + (osVersion ? ` ${osVersion}` : ''),
+    });
+  }
+
+  console.log(config);
+
+  return config;
 }
