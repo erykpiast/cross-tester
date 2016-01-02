@@ -49,27 +49,30 @@ function parseBrowsers(nested) {
 
     (0, _lodash.each)(browser.versions, function (version, versionName) {
       if ((0, _lodash.isObject)(version)) {
-        if (version.hasOwnProperty('devices') && Array.isArray(version.devices)) {
-          version.devices.forEach(function (deviceModel) {
-            var key = displayName + ' ' + version.osVersion + ' -' + (browser.deviceName ? ' ' + browser.deviceName : '') + (' ' + deviceModel);
+        (function () {
+          var deviceName = version.deviceName || browser.deviceName || '';
+          if (version.hasOwnProperty('devices') && Array.isArray(version.devices)) {
+            version.devices.forEach(function (deviceModel) {
+              var key = displayName + ' ' + version.osVersion + ' -' + (deviceName ? ' ' + deviceName : '') + (' ' + deviceModel);
+
+              flat[key] = {
+                name: browser.name,
+                os: browser.os || '',
+                osVersion: (version.osVersion || browser.osVersion || '').toString(),
+                device: (deviceName ? deviceName + ' ' : '') + deviceModel
+              };
+            });
+          } else {
+            var key = displayName + ' ' + version.osVersion;
 
             flat[key] = {
               name: browser.name,
               os: browser.os || '',
               osVersion: (version.osVersion || browser.osVersion || '').toString(),
-              device: (browser.deviceName ? browser.deviceName + ' ' : '') + deviceModel
+              device: deviceName
             };
-          });
-        } else {
-          var key = displayName + ' ' + version.osVersion;
-
-          flat[key] = {
-            name: browser.name,
-            os: browser.os || '',
-            osVersion: (version.osVersion || browser.osVersion || '').toString(),
-            device: ''
-          };
-        }
+          }
+        })();
       } else if ((0, _lodash.isString)(version) || (0, _lodash.isNumber)(version)) {
         var key = displayName + ' ' + version;
 
