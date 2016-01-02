@@ -50,6 +50,31 @@ const defaultConfig = {
       },
       os: 'Windows',
       osVersion: '10'
+    },
+    'Safari Mobile': {
+      name: 'Safari',
+      versions: {
+        latest: {
+          osVersion: '8.3',
+          devices: ['iPhone', 'iPad']
+        },
+        previous: {
+          osVersion: '7.0',
+          devices: ['iPhone', 'iPad']
+        }
+      },
+      os: 'iOS'
+    },
+    'Android Browser': {
+      name: 'Android Browser',
+      versions: {
+        'Lollipop': {
+          osVersion: '5.0'
+        },
+        'Kitkat': {
+          osVersion: 'KitKat'
+        }
+      }
     }
   }
 };

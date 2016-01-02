@@ -3,7 +3,7 @@ import webdriver from 'browserstack-webdriver';
 import Promise from 'bluebird';
 import { parse as parseUrl } from 'url';
 import request from 'request-promise';
-import { extend } from 'lodash';
+import { assign } from 'lodash';
 
 
 const levels = {
@@ -102,12 +102,13 @@ const ignoredLogs = [
   'Only application manifests may use',
   'Get a connection to permissions.sqlite.',
   'DB table(moz_perms) is created',
-  'Browser.SelfSupportBackend'
+  'Browser.SelfSupportBackend',
+  'Invalid CSS'
 ];
 
 const RESULTS_ARRAY_NAME = 'window.__results__';
 
-const DEFAULT_TIMEOUT = 120 * 1000;
+const DEFAULT_TIMEOUT = 300 * 1000;
 const chromeLogMessagePattern = /^(javascript|(?:(?:https?|chrome-extension)\:\/\/\S+))\s+(\d+:\d+)\s+(.*)$/i;
 const firefoxAddonLogPattern = /^(\d{13})\t(\S*(?:addons|extensions)\S*)\t([A-Z]+)\t(.*)\n?$/i;
 const androidEmulatorLogMessagePattern = /^\[([0-9\-\A-Z:]+)\](?:\s+\[[A-Z]+\]\s+[A-Z]{1}\/[a-z0-9\/\._]+\s*(?:\[[^\]]+\])?\(\s+\d+\)\:\s+)?(?:\-+\s+beginning\s+of\s+[a-z]+)?(.*)$/i;
@@ -161,7 +162,7 @@ export function createTest(browser, userName, accessToken) {
     return () => {
       driver = new webdriver.Builder()
         .usingServer('http://hub.browserstack.com/wd/hub')
-        .withCapabilities(extend({}, browser, {
+        .withCapabilities(assign({}, browser, {
           'browserstack.user': userName,
           'browserstack.key': accessToken,
           'loggingPrefs': { 'browser': 'ALL' },
@@ -205,9 +206,18 @@ export function createTest(browser, userName, accessToken) {
 
   function getBrowserLogs(levelName) {
     const level = ((levels[levelName] || { value: 0 }).value || levels.INFO.value);
+    const logger = new webdriver.WebDriver.Logs(driver);
 
-    return () => new webdriver.WebDriver.Logs(driver)
-    .get('browser')
+    return () => logger
+    .getAvailableLogTypes()
+    .then(
+      (types) =>
+        (Array.isArray(types) && types.indexOf('browser') !== -1 ?
+          logger.get('browser') :
+          Promise.resolve([])
+        ),
+      () => [] // supress error
+    )
     .then((logs) =>
       browserLogs = browserLogs.concat(logs),
       (err) => {
@@ -363,23 +373,35 @@ export function createTest(browser, userName, accessToken) {
  *
  * @return {Object}
  *   @property {String} name - human-readable test name
+ *    - for Appium (mobile browsers)
  *   @property {String} browserName
  *   @property {String} version
  *   @property {String} platform
  *   @property {String} device
+ *    - for Selenium (desktop browsers)
+ *   @property {String} browser
+ *   @property {String} browser_version
+ *   @property {String} os
+ *   @property {String} os_version
  */
 export function parseBrowser(browser, displayName) {
-  const browserName = ({
+  let browserName = ({
     'microsoft edge': 'Edge',
     'edge': 'Edge',
     'ie': 'IE',
     'internet explorer': 'IE',
     'google chrome': 'chrome',
     'mozilla firefox': 'firefox',
-    'ff': 'firefox'
+    'ff': 'firefox',
+    'apple safari': 'Safari',
+    'ios safari': 'Safari',
+    'safari mobile': 'Safari',
+    'iphone': 'Safari',
+    'ipad': 'Safari',
+    'android browser': 'Android'
   })[browser.name.toLowerCase()] || browser.name;
 
-  const osName = ({
+  let osName = ({
     'mac': 'OS X',
     'android': 'ANDROID',
     'ios': 'MAC'
@@ -396,12 +418,73 @@ export function parseBrowser(browser, displayName) {
     }
   })[osName] || {})[browser.osVersion.toLowerCase()] || browser.osVersion;
 
-  return {
-    name: `CrossTester - ${displayName}`,
-    browser: browserName,
-    browser_version: browser.version,
-    os: osName,
-    os_version: osVersion,
-    device: browser.device
+  let appium = false;
+  let deviceName = (browser.device || '').toLowerCase();
+  if ((browserName === 'Safari') && (['iphone', 'ipad'].indexOf((deviceName || '').split(' ')[0]) !== -1)) {
+    browserName = 'iPad';
+    appium = true;
+
+    // find device based on OS version
+    // general names like iPhone or iPad are not enough too
+    if ((!deviceName || (deviceName === 'iphone') || (deviceName === 'ipad')) && browser.osVersion) {
+      if (deviceName === 'iphone') {
+        deviceName = ({
+          '8': 'iPhone 6',
+          '8.3': 'iPhone 6',
+          '7': 'iPhone 5S',
+          '6': 'iPhone 5',
+          '5.1': 'iPhone 4S',
+          '5': 'iPhone 4S'
+        })[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
+      } else {
+        deviceName = ({
+          '8': 'iPad Air',
+          '8.3': 'iPad Air',
+          '7': 'iPad 4th',
+          '6': 'iPad 3rd (6.0)',
+          '5.1': 'iPad 3rd',
+          '5': 'iPad 2 (5.0)'
+        })[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
+      }
+    }
+  } else if (browserName === 'Android') {
+    appium = true;
+
+    // find device based on OS version
+    if (!deviceName && browser.osVersion) {
+      deviceName = ({
+        '5': 'Google Nexus 5',
+        'lollipop': 'Google Nexus 5',
+        '4.4': 'Samsung Galaxy S5',
+        'kitkat': 'Samsung Galaxy S5',
+        '4.3': 'Samsung Galaxy S4',
+        'jelly bean': 'Samsung Galaxy S4',
+        '4.2': 'Google Nexus 4',
+        '4.1': 'Samsung Galaxy S3',
+        '4': 'Google Nexus',
+        'ice cream sandwich': 'Google Nexus'
+      })[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
+    }
+  }
+
+  const config = {
+    name: `CrossTester - ${displayName}`
   };
+
+  if (appium) {
+    assign(config, {
+      browserName: browserName,
+      device: deviceName,
+      platform: browserName === 'iPad' ? 'MAC' : 'ANDROID'
+    });
+  } else {
+    assign(config, {
+      browser: browserName,
+      browser_version: browser.version,
+      os: osName,
+      os_version: osVersion
+    });
+  }
+
+  return config;
 }
