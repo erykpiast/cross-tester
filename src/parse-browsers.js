@@ -48,17 +48,18 @@ export default function parseBrowsers(nested) {
 
     each(browser.versions, (version, versionName) => {
       if(isObject(version)) {
+        const deviceName = version.deviceName || browser.deviceName || '';
         if (version.hasOwnProperty('devices') && Array.isArray(version.devices)) {
           version.devices.forEach((deviceModel) => {
             const key = `${displayName} ${version.osVersion} -` +
-              (browser.deviceName ? ` ${browser.deviceName}` : '') +
+              (deviceName ? ` ${deviceName}` : '') +
               ` ${deviceModel}`;
 
             flat[key] = {
               name: browser.name,
               os: browser.os || '',
               osVersion: (version.osVersion || browser.osVersion || '').toString(),
-              device: (browser.deviceName ? `${browser.deviceName} ` : '') + deviceModel
+              device: (deviceName ? `${deviceName} ` : '') + deviceModel
             };
           });
         } else {
@@ -68,7 +69,7 @@ export default function parseBrowsers(nested) {
             name: browser.name,
             os: browser.os || '',
             osVersion: (version.osVersion || browser.osVersion || '').toString(),
-            device: ''
+            device: deviceName
           };
         }
       } else if(isString(version) || isNumber(version)) {
