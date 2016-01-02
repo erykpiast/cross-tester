@@ -44,6 +44,7 @@ export default function run({
   browsers,
   credentials,
   code = '',
+  url = 'http://blank.org', // we need very simple page always available online
   verbose = false,
   timeout = 1000
 } = {}) {
@@ -91,8 +92,7 @@ export default function run({
       .then(print('starting'))
       .then(test.enter())
       .then(print('connected'))
-      // we need very simple page always available online
-      .then(test.open('about:blank'))
+      .then(test.open(url))
       .then(test.execute(code))
       .then(print('code executed'))
        // wait a while for script execution; later on some callback-based

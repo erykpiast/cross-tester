@@ -349,7 +349,7 @@ export function createTest(browser, userName, accessToken) {
           throw new Error(`cannot open page ${url} in ${DEFAULT_TIMEOUT} ms`);
         }),
         driver.get(url)
-          .then(execute(`${RESULTS_ARRAY_NAME} = [];`))
+          .then(execute(`${RESULTS_ARRAY_NAME} = ${RESULTS_ARRAY_NAME} || [];`))
       ]);
   }
 
