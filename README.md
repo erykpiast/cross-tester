@@ -20,35 +20,40 @@ runCode({
     userName: 'myUserNameOnSauceLabs',
     accessToken: 'myAccessTokenToSauceLabsAccount'
   },
-  // use configurator (https://wiki.saucelabs.com/display/DOCS/Platform+Configurator#/)
-  // to find out names of things in SauceLabs (SL) environment
   browsers: {
-    'Display name (ex. Google Chrome)': {
-      name: 'Chrome', // name of the browser in SL
+    'Google Chrome': { // just a display name
+      name: 'Chrome', // actual browser name
       versions: {
         'Display name (ex. latest)': '46',
         'Display name (ex. the last supported)': '38'
       },
-      platform: 'Windows', // name of the platform in SL
-      osVersion: '10' // notice, that in SL it doesn't make sense for Linux platform
+      platform: 'Windows',
+      osVersion: '10' // optional, can be guessed in most cases
     },
-    'Display name (ex. iOS Safari)': {
-      name: 'Safari', // name of the browser in SL,
+    'iOS Safari': {
+      name: 'Safari',
       versions: {
-        'Display name (ex. latest iPhone)': {
+        'latest iPhone': {
           osVersion: '9.2',
-          deviceName: 'iPhone', // name of testing device in SL
+          deviceName: 'iPhone',
           devices: ['6', '6 Plus', '5S'] // second part of device name, all of those
           // will be combined with the first one, creating 3 testing configurations
         },
-        'Display name (ex. previous iPad)': {
+        'ex. previous iPad': {
           osVersion: '8.4',
-          deviceName: 'iPad', // name of testing device in SL
-          devices: ['Retina', 'Air', '2'] // second part of device name, all of those
-          // will be combined with the first one, creating 3 testing configurations
+          deviceName: 'iPad',
+          devices: ['Retina', 'Air', '2']
         }
       },
       platform: 'iOS' // name of the platform in SL
+    },
+    'Android Browser': {
+      name: 'Android Browser',
+      versions: {
+        'Lollipop': '5.0',
+        'KitKat': 'KitKat' // you can use codenames Android and OS X; in case
+        // of the first one, the newest version is used (ex. Jelly Bean => 4.3)
+      }
     }
   }
 }).then(
@@ -69,5 +74,6 @@ list of browsers with `-b` (the last one has to be valid JSON object, so I
 recommend to simply edit executable file). Full-featured CLI program is coming!
 
 ## Notes
-Mobile browsers on BrowserStack doesn't work really well. It seems like issue of
-the service, but maybe can be resolved on client side. Help is appreciated.
+Some mobile browsers on BrowserStack doesn't work really well. It seems like
+issue of the service, but maybe can be resolved on client side. Help is
+appreciated.
