@@ -64,8 +64,11 @@ function run() {
   var credentials = _ref.credentials;
   var _ref$code = _ref.code;
   var code = _ref$code === undefined ? '' : _ref$code;
+  var _ref$url = _ref.url;
+  var url = _ref$url === undefined ? 'http://blank.org' : _ref$url;
   var _ref$verbose = _ref.verbose;
-  var verbose = _ref$verbose === undefined ? false : _ref$verbose;
+  var // we need very simple page always available online
+  verbose = _ref$verbose === undefined ? false : _ref$verbose;
   var _ref$timeout = _ref.timeout;
   var timeout = _ref$timeout === undefined ? 1000 : _ref$timeout;
 
@@ -114,9 +117,7 @@ function run() {
     }
 
     return function () {
-      return Promise.resolve().then(print('starting')).then(test.enter()).then(print('connected'))
-      // we need very simple page always available online
-      .then(test.open('about:blank')).then(test.execute(code)).then(print('code executed'))
+      return Promise.resolve().then(print('starting')).then(test.enter()).then(print('connected')).then(test.open(url)).then(test.execute(code)).then(print('code executed'))
       // wait a while for script execution; later on some callback-based
       // solution should be used
       .then(test.sleep(timeout)).then(function () {

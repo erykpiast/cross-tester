@@ -302,7 +302,7 @@ function createTest(browser, userName, accessToken) {
     return function () {
       return _bluebird2.default.race([_bluebird2.default.delay(DEFAULT_TIMEOUT).then(function () {
         throw new Error('cannot open page ' + url + ' in ' + DEFAULT_TIMEOUT + ' ms');
-      }), driver.get(url).then(execute(RESULTS_ARRAY_NAME + ' = [];'))]);
+      }), driver.get(url).then(execute(RESULTS_ARRAY_NAME + ' = ' + RESULTS_ARRAY_NAME + ' || [];'))]);
     };
   }
 

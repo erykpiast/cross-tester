@@ -90,8 +90,10 @@ var config = {
   },
   browsers: args.code || args.b ? JSON.parse(args.code || args.b) : defaultConfig.browsers,
   code: args.code || args.c || defaultConfig.code,
+  url: args.code || args.s || undefined,
   provider: args.provider || args.p || defaultConfig.provider,
-  verbose: true
+  verbose: true,
+  timeout: args.code || args.s ? 2000 : 1000
 };
 
 (0, _index2.default)(config).then(function (results) {
