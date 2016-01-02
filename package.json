@@ -4,8 +4,13 @@
   "description": "Utility for automated cross-browser testing with SauceLabs",
   "main": "dist/index.js",
   "bin": "dist/test.js",
-  "repository": "https://github.com/erykpiast/cross-tester",
-  "issues": "https://github.com/erykpiast/cross-tester/issues",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/erykpiast/npm-package-seed.git"
+  },
+  "bugs": {
+    "url": "https://github.com/erykpiast/npm-package-seed/issues"
+  },
   "scripts": {
     "lint": "eslint src/",
     "mocha": "mocha --compilers js:test/babel.js --reporter spec --ui tdd test --require babel-polyfill",

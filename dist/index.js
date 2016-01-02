@@ -2,6 +2,8 @@
 
 var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; })();
 
+var _providers;
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
@@ -19,26 +21,30 @@ var _saucelabs = require('./providers/saucelabs');
 
 var SauceLabs = _interopRequireWildcard(_saucelabs);
 
+var _browserstack = require('./providers/browserstack');
+
+var BrowserStack = _interopRequireWildcard(_browserstack);
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var providers = _defineProperty({}, SauceLabs.name, SauceLabs);
+var providers = (_providers = {}, _defineProperty(_providers, SauceLabs.name, SauceLabs), _defineProperty(_providers, BrowserStack.name, BrowserStack), _providers);
 
 /**
  * @function run
  * @access public
  * @description runs code in each of provided browsers
- * 
+ *
  * @param {Object} config
  *   @property {Object} credentials
  *     @property {String} userName
  *     @property {String} accessToken
  *   @property {Object} browsers - see documentation for input of parse-browsers
  *     function
- *   @property {String} [provider='saucelabs']
+ *   @property {String} provider - "saucelabs" or "browserstack"
  *   @property {String} [code] - valid JS code
  *   @property {Boolean} [verbose=false] - if true, prints logs about testing
  *     progress to console
@@ -53,12 +59,11 @@ var providers = _defineProperty({}, SauceLabs.name, SauceLabs);
 function run() {
   var _ref = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
-  var _ref$provider = _ref.provider;
-  var provider = _ref$provider === undefined ? 'saucelabs' : _ref$provider;
+  var provider = _ref.provider;
   var browsers = _ref.browsers;
+  var credentials = _ref.credentials;
   var _ref$code = _ref.code;
   var code = _ref$code === undefined ? '' : _ref$code;
-  var credentials = _ref.credentials;
   var _ref$verbose = _ref.verbose;
   var verbose = _ref$verbose === undefined ? false : _ref$verbose;
   var _ref$timeout = _ref.timeout;
@@ -81,23 +86,26 @@ function run() {
   var _providers$provider = providers[provider];
   var createTest = _providers$provider.createTest;
   var getConcurrencyLimit = _providers$provider.getConcurrencyLimit;
+  var parseBrowser = _providers$provider.parseBrowser;
   var userName = credentials.userName;
   var accessToken = credentials.accessToken;
 
   // define tests for all the websites in all browsers (from current config file)
 
   var testingSessions = Object.keys(parsed).map(function (browserName) {
+    var browserConfig = (0, _lodash.extend)(parseBrowser(parsed[browserName], browserName), {
+      displayName: browserName
+    });
+
     return {
-      test: createTest(parsed[browserName], userName, accessToken),
-      browser: (0, _lodash.extend)({
-        name: browserName
-      }, parsed[browserName])
+      test: createTest(browserConfig, userName, accessToken),
+      browser: browserConfig
     };
   }).map(function (_ref2) {
     var test = _ref2.test;
     var browser = _ref2.browser;
     return function () {
-      return Promise.resolve().then(print('started testing session in browser ' + browser.name)).then(test.enter()).then(print('connected'))
+      return Promise.resolve().then(print('starting testing session in browser ' + browser.displayName)).then(test.enter()).then(print('connected'))
       // we need very simple page always available online
       .then(test.open('about:blank')).then(test.execute(code)).then(print('code executed'))
       // wait a while for script execution; later on some callback-based
@@ -109,7 +117,7 @@ function run() {
           var results = _ref4[0];
           var logs = _ref4[1];
           return {
-            browser: browser.name,
+            browser: browser.displayName,
             results: results,
             logs: logs
           };
@@ -120,14 +128,14 @@ function run() {
         // suppress any error
         // we don't want to break a chain, but continue tests in other browsers
         return {
-          browser: browser.name,
+          browser: browser.displayName,
           results: [{
             type: 'FAIL',
             message: err.message
           }],
           logs: []
         };
-      }).then(print('testing session finished'));
+      }).then(print('testing session in browser ' + browser.displayName + ' finished'));
     };
   });
 

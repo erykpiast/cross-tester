@@ -1,7 +1,7 @@
 # cross-tester
 Utility for automated cross-browser testing. It allows to execute piece of
-JavaScript code in many browsers (using SauceLabs Selenium/Appium grid) and
-compare results for each one.
+JavaScript code in many browsers (using SauceLabs or BrowserStack Selenium/Appium
+grid) and compare results for each one.
 
 ## Installation
 
@@ -62,10 +62,12 @@ runCode({
 ## CLI
 It's also possible to use simple CLI interface. You can find it as `cross-tester`
 in your path after installing the package globally (or inside `./node_modules/.bin`
-directory in case of local installation). Provide user and access token with
-`-u` and `-a` parameters (those are only required ones), code with `-c` and
+directory in case of local installation). Provide a name of Selenium/Appium grid
+service of your choice with `-p` parameter, user and access token with
+`-u` and `-a` (those three are only required parameters), code with `-c` and
 list of browsers with `-b` (the last one has to be valid JSON object, so I
 recommend to simply edit executable file). Full-featured CLI program is coming!
 
-## BrowserStack?
-Support in progress.
+## Notes
+Mobile browsers on BrowserStack doesn't work really well. It seems like issue of
+the service, but maybe can be resolved on client side. Help is appreciated.

@@ -20,43 +20,70 @@ var defaultConfig = {
   code: 'var x = 3; window.__results__.push(window.navigator.userAgent);',
   browsers: {
     'Google Chrome': {
-      browserName: 'Chrome',
+      name: 'chrome',
       versions: {
         latest: '46'
       },
-      platform: 'Windows',
+      os: 'Windows',
       osVersion: '10'
     },
     'Mozilla Firefox': {
-      browserName: 'Firefox',
+      name: 'Firefox',
       versions: {
         latest: '42'
       },
-      platform: 'Linux'
+      os: 'Windows',
+      osVersion: '10'
     },
     'Microsoft Internet Explorer': {
-      browserName: 'internet explorer',
+      name: 'Internet Explorer',
       versions: {
         latest: '11'
       },
-      platform: 'Windows',
+      os: 'Windows',
       osVersion: '10'
     },
     'Apple Safari': {
-      browserName: 'Safari',
+      name: 'Safari',
       versions: {
         latest: '9'
       },
-      platform: 'OS X',
+      os: 'OS X',
       osVersion: '10.11'
     },
     'Microsoft Edge': {
-      browserName: 'MicrosoftEdge',
+      name: 'Microsoft Edge',
       versions: {
-        latest: '20'
+        latest: '20', // works in SL
+        previous: '12' // works in BS
       },
-      platform: 'Windows',
+      os: 'Windows',
       osVersion: '10'
+    },
+    'Safari Mobile': {
+      name: 'Safari',
+      versions: {
+        latest: {
+          osVersion: '8.3',
+          devices: ['iPhone', 'iPad']
+        },
+        previous: {
+          osVersion: '7.0',
+          devices: ['iPhone', 'iPad']
+        }
+      },
+      os: 'iOS'
+    },
+    'Android Browser': {
+      name: 'Android Browser',
+      versions: {
+        'Lollipop': {
+          osVersion: '5.0'
+        },
+        'Kitkat': {
+          osVersion: 'KitKat'
+        }
+      }
     }
   }
 };
@@ -68,7 +95,8 @@ var config = {
   },
   browsers: args.code || args.b ? JSON.parse(args.code || args.b) : defaultConfig.browsers,
   code: args.code || args.c || defaultConfig.code,
-  provider: args.provider || args.p || defaultConfig.provider
+  provider: args.provider || args.p || defaultConfig.provider,
+  verbose: true
 };
 
 (0, _index2.default)(config).then(function (results) {
