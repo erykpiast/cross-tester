@@ -47,25 +47,38 @@ export default function parseBrowsers(nested) {
     }
 
     each(browser.versions, (version, versionName) => {
-      if(isObject(version) && version.hasOwnProperty('devices') && Array.isArray(version.devices)) {
-        version.devices.forEach((deviceModel) => {
-          const key = `${displayName} ${version.osVersion} - ${browser.deviceName} ${deviceModel}`;
+      if(isObject(version)) {
+        if (version.hasOwnProperty('devices') && Array.isArray(version.devices)) {
+          version.devices.forEach((deviceModel) => {
+            const key = `${displayName} ${version.osVersion} -` +
+              (browser.deviceName ? ` ${browser.deviceName}` : '') +
+              ` ${deviceModel}`;
+
+            flat[key] = {
+              name: browser.name,
+              os: browser.os || '',
+              osVersion: (version.osVersion || browser.osVersion || '').toString(),
+              device: (browser.deviceName ? `${browser.deviceName} ` : '') + deviceModel
+            };
+          });
+        } else {
+          const key = `${displayName} ${version.osVersion}`;
 
           flat[key] = {
             name: browser.name,
-            os: browser.os,
-            osVersion: (version.osVersion || browser.osVersion).toString(),
-            device: `${browser.deviceName} ${deviceModel}`
+            os: browser.os || '',
+            osVersion: (version.osVersion || browser.osVersion || '').toString(),
+            device: ''
           };
-        });
+        }
       } else if(isString(version) || isNumber(version)) {
         const key = `${displayName} ${version}`;
 
         flat[key] = {
           name: browser.name,
           version: version.toString(),
-          os: browser.os,
-          osVersion: browser.osVersion
+          os: browser.os || '',
+          osVersion: browser.osVersion || ''
         };
       } else if(version === null) {
         console.warn(`There is no defined version for ${displayName} ${versionName}`);
