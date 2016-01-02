@@ -8,9 +8,9 @@ exports.getConcurrencyLimit = getConcurrencyLimit;
 exports.createTest = createTest;
 exports.parseBrowser = parseBrowser;
 
-var _wd = require('wd');
+var _browserstackWebdriver = require('browserstack-webdriver');
 
-var _wd2 = _interopRequireDefault(_wd);
+var _browserstackWebdriver2 = _interopRequireDefault(_browserstackWebdriver);
 
 var _bluebird = require('bluebird');
 
@@ -21,6 +21,8 @@ var _url = require('url');
 var _requestPromise = require('request-promise');
 
 var _requestPromise2 = _interopRequireDefault(_requestPromise);
+
+var _lodash = require('lodash');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -60,7 +62,7 @@ var ignoredLogs = [
 // CSS related
 'Declaration dropped', 'Ruleset ignored due to bad selector', 'Expected declaration but found', 'Expected media feature name but found', 'Unrecognized at-rule', 'Keyframe rule ignored due to bad selector',
 // addons stuff
-'Could not read chrome manifest', 'blocklist is disabled', 'Trying to re-register CID', 'chrome-extension://', 'resource://', 'Native module at path', 'Failed to load native module at path', 'Component returned failure code', 'While registering XPCOM module', 'addons.xpi:',
+'Could not read chrome manifest', 'blocklist is disabled', 'Trying to re-register CID', 'chrome-extension://', 'resource://', 'Native module at path', 'Failed to load native module at path', 'Component returned failure code', 'While registering XPCOM module',
 // Facebook script
 'Invalid App Id: Must be a number or numeric string representing the application id.', 'The "fb-root" div has not been created, auto-creating', 'FB.getLoginStatus() called before calling FB.init().', 'FB.init has already been called - this could indicate a problem',
 // SalesManago
@@ -68,17 +70,17 @@ var ignoredLogs = [
 // Qualtrics
 'Please remove it from your site or contact your Qualtrics Administrator',
 // just useless here
-'server does not support RFC 5746, see CVE-2009-3555', 'Mixed Content', 'downloadable font', 'Unexpected end of file while searching for end of @media, @supports or @-moz-document rule', 'Blocked loading mixed active content', 'The character encoding of the HTML document was not declared', 'A call to document.write() from an asynchronously-loaded external script was ignored', 'Failed to execute \'write\' on \'Document\'', 'Password fields present on an insecure (http://) page', 'Password fields present in a form with an insecure (http://) form action', 'WebGL: Error during native OpenGL init', 'WebGL: WebGL creation failed', 'to start media query expression but found', 'The page was reloaded, because the character encoding declaration of the HTML document was not found when prescanning the first 1024 bytes of the file', 'Refused to set unsafe header', 'The character encoding of a framed document was not declared', 'While creating services from category', 'unrecognized command line flag', 'Only application manifests may use', 'Get a connection to permissions.sqlite.', 'DB table(moz_perms) is created', 'Browser.SelfSupportBackend'];
+'server does not support RFC 5746, see CVE-2009-3555', 'Mixed Content', 'downloadable font', 'Unexpected end of file while searching for end of @media, @supports or @-moz-document rule', 'Blocked loading mixed active content', 'The character encoding of the HTML document was not declared', 'A call to document.write() from an asynchronously-loaded external script was ignored', 'Failed to execute \'write\' on \'Document\'', 'Password fields present on an insecure (http://) page', 'Password fields present in a form with an insecure (http://) form action', 'WebGL: Error during native OpenGL init', 'WebGL: WebGL creation failed', 'to start media query expression but found', 'The page was reloaded, because the character encoding declaration of the HTML document was not found when prescanning the first 1024 bytes of the file', 'Refused to set unsafe header', 'The character encoding of a framed document was not declared', 'While creating services from category', 'unrecognized command line flag', 'Only application manifests may use', 'Get a connection to permissions.sqlite.', 'DB table(moz_perms) is created', 'Browser.SelfSupportBackend', 'Invalid CSS'];
 
 var RESULTS_ARRAY_NAME = 'window.__results__';
 
-var DEFAULT_TIMEOUT = 60 * 1000;
+var DEFAULT_TIMEOUT = 300 * 1000;
 var chromeLogMessagePattern = /^(javascript|(?:(?:https?|chrome-extension)\:\/\/\S+))\s+(\d+:\d+)\s+(.*)$/i;
 var firefoxAddonLogPattern = /^(\d{13})\t(\S*(?:addons|extensions)\S*)\t([A-Z]+)\t(.*)\n?$/i;
 var androidEmulatorLogMessagePattern = /^\[([0-9\-\A-Z:]+)\](?:\s+\[[A-Z]+\]\s+[A-Z]{1}\/[a-z0-9\/\._]+\s*(?:\[[^\]]+\])?\(\s+\d+\)\:\s+)?(?:\-+\s+beginning\s+of\s+[a-z]+)?(.*)$/i;
 var androidEmulatorLogBrowserMessagePattern = /^\[([0-9\-\A-Z:]+)\]\s+\[[A-Z]+\]\s+I\/chromium\(\s+\d+\)\:\s+\[([A-Z]+)\:CONSOLE\(\d+\)\]\s+\"(.*)",\s+source\:\s+(\S*)\s+\((\d+)\)$/i;
 
-var name = exports.name = 'saucelabs';
+var name = exports.name = 'browserstack';
 
 /**
  * @function getConcurrencyLimit - returns concurrency limit for the account
@@ -89,8 +91,8 @@ var name = exports.name = 'saucelabs';
  * @return {Promise<Number>} number of available concurrent VMs for the account
  */
 function getConcurrencyLimit(userName, accessToken) {
-  var API_ROOT = 'https://saucelabs.com/rest/v1/';
-  return (0, _requestPromise2.default)(API_ROOT + ('users/' + userName + '/concurrency'), {
+  var API_ROOT = 'https://www.browserstack.com/';
+  return (0, _requestPromise2.default)(API_ROOT + 'automate/plan.json', {
     auth: {
       user: userName,
       pass: accessToken,
@@ -98,7 +100,7 @@ function getConcurrencyLimit(userName, accessToken) {
     }
   }).then(function (res) {
     var parsed = JSON.parse(res);
-    return parseInt(parsed.concurrency[userName].remaining.mac, 0);
+    return parseInt(parsed.parallel_sessions_max_allowed, 0);
   });
 }
 
@@ -121,12 +123,23 @@ function createTest(browser, userName, accessToken) {
 
   function enter() {
     return function () {
-      driver = _wd2.default.remote({
-        hostname: 'ondemand.saucelabs.com',
-        port: 80,
-        user: userName,
-        pwd: accessToken
-      }, 'promise');
+      driver = new _browserstackWebdriver2.default.Builder().usingServer('http://hub.browserstack.com/wd/hub').withCapabilities((0, _lodash.assign)({}, browser, {
+        'browserstack.user': userName,
+        'browserstack.key': accessToken,
+        'loggingPrefs': { 'browser': 'ALL' }
+      })).build();
+
+      return _bluebird2.default.race([_bluebird2.default.delay(DEFAULT_TIMEOUT).then(function () {
+        throw new Error('cannot connect to SauceLabs in ' + DEFAULT_TIMEOUT + ' ms');
+      }), driver.session_.then(function (session) {
+        return session;
+      }, function (err) {
+        if (err.message.match(/(Browser_Version not supported)|(Browser combination invalid)/)) {
+          throw new Error('browser ' + browser.browserName + ' ' + browser.version + ' is not supported (' + err.message + ')');
+        } else {
+          throw err;
+        }
+      })]);
 
       // maybe we can use this?
       // wd.configureHttp({
@@ -134,17 +147,6 @@ function createTest(browser, userName, accessToken) {
       //   retries: 3,
       //   retryDelay: 100
       // });
-      return _bluebird2.default.race([_bluebird2.default.delay(DEFAULT_TIMEOUT).then(function () {
-        throw new Error('cannot connect to SauceLabs in ' + DEFAULT_TIMEOUT + ' ms');
-      }), driver.init(browser).then(function (_session_) {
-        return _session_[1];
-      }, function (err) {
-        if (err.message.match(/(The environment you requested was unavailable)|(Browser combination invalid)/)) {
-          throw new Error('browser ' + browser.browserName + ' ' + browser.version + ' is not supported (' + err.message + ')');
-        } else {
-          throw err;
-        }
-      })]);
     };
   }
 
@@ -161,22 +163,29 @@ function createTest(browser, userName, accessToken) {
 
   function getBrowserLogs(levelName) {
     var level = (levels[levelName] || { value: 0 }).value || levels.INFO.value;
+    var logger = new _browserstackWebdriver2.default.WebDriver.Logs(driver);
 
     return function () {
-      return driver.logTypes().then(function (types) {
-        return Array.isArray(types) && types.indexOf('browser') !== -1 ? driver.log('browser') : _bluebird2.default.resolve([]);
+      return logger.getAvailableLogTypes().then(function (types) {
+        return Array.isArray(types) && types.indexOf('browser') !== -1 ? logger.get('browser') : _bluebird2.default.resolve([]);
       }, function () {
         return [];
       } // supress error
       ).then(function (logs) {
         return browserLogs = browserLogs.concat(logs);
+      }, function (err) {
+        if (/Command not found|not implemented/.test(err.message)) {
+          return browserLogs;
+        }
+
+        throw err;
       }).then(function (logs) {
         var notGot = logs.slice(browserLogsGot);
 
         browserLogsGot = logs.length;
 
         return notGot.filter(function (log) {
-          return levels[log.level].value >= level;
+          return levels[log.level.name].value >= level;
         });
       }).then(function (logs) {
         return(
@@ -258,7 +267,7 @@ function createTest(browser, userName, accessToken) {
     // it more safe to send stringified results through WD and parse it here
     // ex. MS Edge likes return arrays as object with numeric keys
     return function () {
-      return driver.execute('return JSON.stringify(' + RESULTS_ARRAY_NAME + ');').then(function (json) {
+      return driver.executeScript('return JSON.stringify(' + RESULTS_ARRAY_NAME + ');').then(function (json) {
         return JSON.parse(json);
       });
     };
@@ -266,7 +275,7 @@ function createTest(browser, userName, accessToken) {
 
   function execute(code) {
     return function () {
-      return driver.safeExecute(code);
+      return driver.executeScript(code);
     };
   }
 
@@ -316,41 +325,118 @@ function createTest(browser, userName, accessToken) {
  *
  * @return {Object}
  *   @property {String} name - human-readable test name
+ *    - for Appium (mobile browsers)
  *   @property {String} browserName
  *   @property {String} version
  *   @property {String} platform
  *   @property {String} device
+ *    - for Selenium (desktop browsers)
+ *   @property {String} browser
+ *   @property {String} browser_version
+ *   @property {String} os
+ *   @property {String} os_version
  */
 function parseBrowser(browser, displayName) {
   var browserName = ({
-    'microsoft edge': 'MicrosoftEdge',
-    'edge': 'MicrosoftEdge',
-    'ie': 'internet explorer',
+    'microsoft edge': 'Edge',
+    'edge': 'Edge',
+    'ie': 'IE',
+    'internet explorer': 'IE',
     'google chrome': 'chrome',
     'mozilla firefox': 'firefox',
-    'ff': 'firefox'
+    'ff': 'firefox',
+    'apple safari': 'Safari',
+    'ios safari': 'Safari',
+    'safari mobile': 'Safari',
+    'iphone': 'Safari',
+    'ipad': 'Safari',
+    'android browser': 'Android'
   })[browser.name.toLowerCase()] || browser.name;
 
   var osName = ({
-    'mac': 'OS X'
+    'mac': 'OS X',
+    'android': 'ANDROID',
+    'ios': 'MAC'
   })[browser.os.toLowerCase()] || browser.os;
 
   var osVersion = (({
     'OS X': {
-      'Snow Leopard': '10.6',
-      'Lion': '10.7',
-      'Mountain Lion': '10.8',
-      'Mavericks': '10.9',
-      'Yosemite': '10.10',
-      'El Capitan': '10.11'
+      '10.6': 'Snow Leopard',
+      '10.7': 'Lion',
+      '10.8': 'Mountain Lion',
+      '10.9': 'Mavericks',
+      '10.10': 'Yosemite',
+      '10.11': 'El Capitan'
     }
   })[osName] || {})[browser.osVersion.toLowerCase()] || browser.osVersion;
 
-  return {
-    name: 'CrossTester - ' + displayName,
-    browserName: browserName,
-    version: browser.version,
-    platform: osName + (browser.hasOwnProperty('osVersion') && 'undefined' !== typeof osVersion ? ' ' + osVersion : ''),
-    device: browser.device
+  var appium = false;
+  var deviceName = (browser.device || '').toLowerCase();
+  if (browserName === 'Safari' && ['iphone', 'ipad'].indexOf((deviceName || '').split(' ')[0]) !== -1) {
+    browserName = 'iPad';
+    appium = true;
+
+    // find device based on OS version
+    // general names like iPhone or iPad are not enough too
+    if ((!deviceName || deviceName === 'iphone' || deviceName === 'ipad') && browser.osVersion) {
+      if (deviceName === 'iphone') {
+        deviceName = ({
+          '8': 'iPhone 6',
+          '8.3': 'iPhone 6',
+          '7': 'iPhone 5S',
+          '6': 'iPhone 5',
+          '5.1': 'iPhone 4S',
+          '5': 'iPhone 4S'
+        })[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
+      } else {
+        deviceName = ({
+          '8': 'iPad Air',
+          '8.3': 'iPad Air',
+          '7': 'iPad 4th',
+          '6': 'iPad 3rd (6.0)',
+          '5.1': 'iPad 3rd',
+          '5': 'iPad 2 (5.0)'
+        })[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
+      }
+    }
+  } else if (browserName === 'Android') {
+    appium = true;
+
+    // find device based on OS version
+    if (!deviceName && browser.osVersion) {
+      deviceName = ({
+        '5': 'Google Nexus 5',
+        'lollipop': 'Google Nexus 5',
+        '4.4': 'Samsung Galaxy S5',
+        'kitkat': 'Samsung Galaxy S5',
+        '4.3': 'Samsung Galaxy S4',
+        'jelly bean': 'Samsung Galaxy S4',
+        '4.2': 'Google Nexus 4',
+        '4.1': 'Samsung Galaxy S3',
+        '4': 'Google Nexus',
+        'ice cream sandwich': 'Google Nexus'
+      })[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
+    }
+  }
+
+  var config = {
+    name: 'CrossTester - ' + displayName
   };
+
+  if (appium) {
+    (0, _lodash.assign)(config, {
+      browserName: browserName,
+      device: deviceName,
+      platform: browserName === 'iPad' ? 'MAC' : 'ANDROID'
+    });
+  } else {
+    (0, _lodash.assign)(config, {
+      browser: browserName,
+      browser_version: browser.version,
+      os: osName,
+      os_version: osVersion
+    });
+  }
+
+  return config;
 }
