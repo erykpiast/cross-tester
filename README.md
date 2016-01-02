@@ -67,3 +67,7 @@ service of your choice with `-p` parameter, user and access token with
 `-u` and `-a` (those three are only required parameters), code with `-c` and
 list of browsers with `-b` (the last one has to be valid JSON object, so I
 recommend to simply edit executable file). Full-featured CLI program is coming!
+
+## Notes
+Mobile browsers on BrowserStack doesn't work really well. It seems like issue of
+the service, but maybe can be resolved on client side. Help is appreciated.
