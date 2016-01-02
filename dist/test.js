@@ -24,32 +24,32 @@ var defaultConfig = {
       versions: {
         latest: '46'
       },
-      os: 'Windows',
-      osVersion: '10'
+      os: 'Windows'
     },
     'Mozilla Firefox': {
       name: 'Firefox',
       versions: {
         latest: '42'
       },
-      os: 'Windows',
-      osVersion: '10'
+      os: 'Windows'
     },
     'Microsoft Internet Explorer': {
       name: 'Internet Explorer',
       versions: {
-        latest: '11'
+        latest: '11',
+        previous: '10',
+        old: '9'
       },
-      os: 'Windows',
-      osVersion: '10'
+      os: 'Windows'
     },
     'Apple Safari': {
       name: 'Safari',
       versions: {
-        latest: '9'
+        latest: '9',
+        previous: '8',
+        old: '7'
       },
-      os: 'OS X',
-      osVersion: '10.11'
+      os: 'OS X'
     },
     'Microsoft Edge': {
       name: 'Microsoft Edge',
@@ -57,8 +57,7 @@ var defaultConfig = {
         latest: '20', // works in SL
         previous: '12' // works in BS
       },
-      os: 'Windows',
-      osVersion: '10'
+      os: 'Windows'
     },
     'Safari Mobile': {
       name: 'Safari',
@@ -77,12 +76,8 @@ var defaultConfig = {
     'Android Browser': {
       name: 'Android Browser',
       versions: {
-        'Lollipop': {
-          osVersion: '5.0'
-        },
-        'Kitkat': {
-          osVersion: 'KitKat'
-        }
+        'Lollipop': '5.0',
+        'Jelly Bean': 'Jelly Bean'
       }
     }
   }

@@ -104,8 +104,17 @@ function run() {
   }).map(function (_ref2) {
     var test = _ref2.test;
     var browser = _ref2.browser;
+
+    var browserName = browser.displayName;
+
+    function print(message) {
+      return (0, _promisesUtil.andReturn)(function () {
+        return Promise.resolve(verbose ? console.log(browserName + ' - ' + message) : 0);
+      });
+    }
+
     return function () {
-      return Promise.resolve().then(print('starting testing session in browser ' + browser.displayName)).then(test.enter()).then(print('connected'))
+      return Promise.resolve().then(print('starting')).then(test.enter()).then(print('connected'))
       // we need very simple page always available online
       .then(test.open('about:blank')).then(test.execute(code)).then(print('code executed'))
       // wait a while for script execution; later on some callback-based
@@ -117,7 +126,7 @@ function run() {
           var results = _ref4[0];
           var logs = _ref4[1];
           return {
-            browser: browser.displayName,
+            browser: browserName,
             results: results,
             logs: logs
           };
@@ -128,14 +137,14 @@ function run() {
         // suppress any error
         // we don't want to break a chain, but continue tests in other browsers
         return {
-          browser: browser.displayName,
+          browser: browserName,
           results: [{
             type: 'FAIL',
             message: err.message
           }],
           logs: []
         };
-      }).then(print('testing session in browser ' + browser.displayName + ' finished'));
+      }).then(print('finished'));
     };
   });
 
@@ -155,10 +164,4 @@ function run() {
       }, {});
     });
   });
-
-  function print(message) {
-    return (0, _promisesUtil.andReturn)(function () {
-      return Promise.resolve(verbose ? console.log(message) : 0);
-    });
-  }
 }

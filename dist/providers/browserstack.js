@@ -24,6 +24,14 @@ var _requestPromise2 = _interopRequireDefault(_requestPromise);
 
 var _lodash = require('lodash');
 
+var _systemBrowsers = require('../system-browsers');
+
+var osVersionForBrowser = _interopRequireWildcard(_systemBrowsers);
+
+var _osxVersions = require('../osx-versions');
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
@@ -266,9 +274,14 @@ function createTest(browser, userName, accessToken) {
   function getResults() {
     // it more safe to send stringified results through WD and parse it here
     // ex. MS Edge likes return arrays as object with numeric keys
+    // on the other hand, strngification fails in IE 9, so we need a fallback
     return function () {
-      return driver.executeScript('return JSON.stringify(' + RESULTS_ARRAY_NAME + ');').then(function (json) {
-        return JSON.parse(json);
+      return driver.executeScript('try {\n        return JSON.stringify(' + RESULTS_ARRAY_NAME + ');\n      } catch(err) {\n        return ' + RESULTS_ARRAY_NAME + ';\n      }').then(function (jsonOrNot) {
+        try {
+          return JSON.parse(jsonOrNot);
+        } catch (err) {
+          return jsonOrNot;
+        }
       });
     };
   }
@@ -359,20 +372,12 @@ function parseBrowser(browser, displayName) {
     'ios': 'MAC'
   })[browser.os.toLowerCase()] || browser.os;
 
-  var osVersion = (({
-    'OS X': {
-      '10.6': 'Snow Leopard',
-      '10.7': 'Lion',
-      '10.8': 'Mountain Lion',
-      '10.9': 'Mavericks',
-      '10.10': 'Yosemite',
-      '10.11': 'El Capitan'
-    }
-  })[osName] || {})[browser.osVersion.toLowerCase()] || browser.osVersion;
+  var osVersion = osName === 'MAC' ? _osxVersions.numberToName[browser.osVersion.toLowerCase()] : browser.osVersion;
 
   var appium = false;
   var deviceName = (browser.device || '').toLowerCase();
   if (browserName === 'Safari' && ['iphone', 'ipad'].indexOf((deviceName || '').split(' ')[0]) !== -1) {
+    // Safari on iOS
     browserName = 'iPad';
     appium = true;
 
@@ -400,6 +405,7 @@ function parseBrowser(browser, displayName) {
       }
     }
   } else if (browserName === 'Android') {
+    // Android Browser
     appium = true;
 
     // find device based on OS version
@@ -416,6 +422,21 @@ function parseBrowser(browser, displayName) {
         '4': 'Google Nexus',
         'ice cream sandwich': 'Google Nexus'
       })[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
+    }
+  }
+
+  if (!osVersion) {
+    if (osName === 'Windows' && browserName === 'Internet Explorer') {
+      osVersion = osVersionForBrowser.ie[browser.version];
+    }
+
+    if (osName === 'Windows' && browserName === 'MicrosoftEdge') {
+      osVersion = osVersionForBrowser.edge[browser.version];
+    }
+
+    if (osName === 'OS X' && browserName === 'Safari') {
+      osVersion = osVersionForBrowser.safari[browser.version];
+      osVersion = _osxVersions.numberToName[osVersion] || osVersion;
     }
   }
 

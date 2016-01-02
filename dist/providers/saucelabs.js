@@ -22,6 +22,14 @@ var _requestPromise = require('request-promise');
 
 var _requestPromise2 = _interopRequireDefault(_requestPromise);
 
+var _lodash = require('lodash');
+
+var _systemBrowsers = require('../system-browsers');
+
+var osVersionForBrowser = _interopRequireWildcard(_systemBrowsers);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
@@ -72,7 +80,7 @@ var ignoredLogs = [
 
 var RESULTS_ARRAY_NAME = 'window.__results__';
 
-var DEFAULT_TIMEOUT = 60 * 1000;
+var DEFAULT_TIMEOUT = 300 * 1000;
 var chromeLogMessagePattern = /^(javascript|(?:(?:https?|chrome-extension)\:\/\/\S+))\s+(\d+:\d+)\s+(.*)$/i;
 var firefoxAddonLogPattern = /^(\d{13})\t(\S*(?:addons|extensions)\S*)\t([A-Z]+)\t(.*)\n?$/i;
 var androidEmulatorLogMessagePattern = /^\[([0-9\-\A-Z:]+)\](?:\s+\[[A-Z]+\]\s+[A-Z]{1}\/[a-z0-9\/\._]+\s*(?:\[[^\]]+\])?\(\s+\d+\)\:\s+)?(?:\-+\s+beginning\s+of\s+[a-z]+)?(.*)$/i;
@@ -257,9 +265,14 @@ function createTest(browser, userName, accessToken) {
   function getResults() {
     // it more safe to send stringified results through WD and parse it here
     // ex. MS Edge likes return arrays as object with numeric keys
+    // on the other hand, strngification fails in IE 9, so we need a fallback
     return function () {
-      return driver.execute('return JSON.stringify(' + RESULTS_ARRAY_NAME + ');').then(function (json) {
-        return JSON.parse(json);
+      return driver.execute('try {\n        return JSON.stringify(' + RESULTS_ARRAY_NAME + ');\n      } catch(err) {\n        return ' + RESULTS_ARRAY_NAME + ';\n      }').then(function (jsonOrNot) {
+        try {
+          return JSON.parse(jsonOrNot);
+        } catch (err) {
+          return jsonOrNot;
+        }
       });
     };
   }
@@ -328,11 +341,23 @@ function parseBrowser(browser, displayName) {
     'ie': 'internet explorer',
     'google chrome': 'chrome',
     'mozilla firefox': 'firefox',
-    'ff': 'firefox'
+    'ff': 'firefox',
+    'apple safari': 'Safari',
+    'ios safari': 'Safari',
+    'safari mobile': 'Safari',
+    'iphone': 'Safari',
+    'ipad': 'Safari',
+    'android browser': 'Android'
   })[browser.name.toLowerCase()] || browser.name;
 
   var osName = ({
-    'mac': 'OS X'
+    'win': 'Windows',
+    'windows': 'Windows',
+    'mac': 'OS X',
+    'os x': 'OS X',
+    'ios': 'iOS',
+    'android': 'Android',
+    'linux': 'Linux'
   })[browser.os.toLowerCase()] || browser.os;
 
   var osVersion = (({
@@ -346,11 +371,99 @@ function parseBrowser(browser, displayName) {
     }
   })[osName] || {})[browser.osVersion.toLowerCase()] || browser.osVersion;
 
-  return {
-    name: 'CrossTester - ' + displayName,
-    browserName: browserName,
-    version: browser.version,
-    platform: osName + (browser.hasOwnProperty('osVersion') && 'undefined' !== typeof osVersion ? ' ' + osVersion : ''),
-    device: browser.device
+  var appium = false;
+  var appiumLegacy = false;
+  var deviceName = (browser.device || '').toLowerCase();
+  if (browserName === 'Safari' && ['iphone', 'ipad'].indexOf((deviceName || '').split(' ')[0]) !== -1) {
+    // Safari on iOS
+    osName = 'iOS';
+    appium = true;
+
+    if (deviceName === 'iphone') {
+      deviceName = 'iPhone Simulator';
+    }
+
+    if (deviceName === 'ipad') {
+      deviceName = 'iPad Simulator';
+    }
+  } else if (browserName === 'Android') {
+    // Android Browser
+    osName = 'Android';
+    appium = true;
+
+    // find device based on OS version
+    if (!deviceName) {
+      deviceName = 'Android Emulator';
+    }
+
+    if (!osVersion) {
+      osVersion = browser.version;
+    }
+
+    if (isNaN(parseFloat(osVersion, 10))) {
+      // find numeric version by name
+      osVersion = ({
+        'lolipop': '5.1',
+        'kitkat': '4.4',
+        'jelly bean': '4.3',
+        'ice cream sandwich': '4.0'
+      })[osVersion.toLowerCase()];
+    }
+
+    // for some reason platform is different for older Androids
+    if (parseFloat(osVersion, 10) < 4.4) {
+      appiumLegacy = true;
+    } else {
+      browserName = 'Browser';
+    }
+  }
+
+  var config = {
+    name: 'CrossTester - ' + displayName
   };
+
+  if (!osVersion) {
+    if (osName === 'Windows' && browserName === 'Internet Explorer') {
+      osVersion = osVersionForBrowser.ie[browser.version];
+    }
+
+    if (osName === 'Windows' && browserName === 'MicrosoftEdge') {
+      osVersion = osVersionForBrowser.edge[browser.version];
+    }
+
+    if (osName === 'OS X' && browserName === 'Safari') {
+      osVersion = osVersionForBrowser.safari[browser.version];
+    }
+  }
+
+  if (appium) {
+    (0, _lodash.assign)(config, {
+      browserName: browserName,
+      deviceOrientation: 'portrait',
+      deviceName: deviceName
+    });
+
+    if (appiumLegacy) {
+      (0, _lodash.assign)(config, {
+        platform: 'Linux',
+        version: osVersion
+      });
+    } else {
+      (0, _lodash.assign)(config, {
+        platformName: osName,
+        platformVersion: osVersion,
+        appiumVersion: '1.4.16'
+      });
+    }
+  } else {
+    (0, _lodash.assign)(config, {
+      browserName: browserName,
+      version: browser.version,
+      platform: osName + (osVersion ? ' ' + osVersion : '')
+    });
+  }
+
+  console.log(config);
+
+  return config;
 }
