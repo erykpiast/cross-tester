@@ -6,10 +6,10 @@
   "bin": "dist/test.js",
   "repository": {
     "type": "git",
-    "url": "git://github.com/erykpiast/npm-package-seed.git"
+    "url": "git://github.com/erykpiast/cross-tester.git"
   },
   "bugs": {
-    "url": "https://github.com/erykpiast/npm-package-seed/issues"
+    "url": "https://github.com/erykpiast/cross-tester/issues"
   },
   "scripts": {
     "lint": "eslint src/",

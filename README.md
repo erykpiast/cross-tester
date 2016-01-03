@@ -1,7 +1,6 @@
 # cross-tester
-Utility for automated cross-browser testing. It allows to execute piece of
-JavaScript code in many browsers (using SauceLabs or BrowserStack Selenium/Appium
-grid) and compare results for each one.
+The tool allows to execute piece of JavaScript code in many browsers (using
+SauceLabs or BrowserStack Selenium/Appium grid) and compare results for each one.
 
 ## Installation
 
@@ -48,7 +47,7 @@ runCode({
           // just a device name
         }
       },
-      platform: 'iOS' // name of the platform in SL
+      platform: 'iOS'
     },
     'Android Browser': {
       name: 'Android Browser',
