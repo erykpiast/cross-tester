@@ -6,7 +6,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.name = undefined;
+exports.__RewireAPI__ = exports.__ResetDependency__ = exports.__set__ = exports.__Rewire__ = exports.__GetDependency__ = exports.__get__ = exports.name = undefined;
 exports.getConcurrencyLimit = getConcurrencyLimit;
 exports.createTest = createTest;
 exports.parseBrowser = parseBrowser;
@@ -100,7 +100,7 @@ var name = exports.name = 'browserstack';
  */
 function getConcurrencyLimit(userName, accessToken) {
   var API_ROOT = 'https://www.browserstack.com/';
-  return (0, _requestPromise2.default)(API_ROOT + 'automate/plan.json', {
+  return _get__('request')(API_ROOT + 'automate/plan.json', {
     auth: {
       user: userName,
       pass: accessToken,
@@ -131,14 +131,14 @@ function createTest(browser, userName, accessToken) {
 
   function enter() {
     return function () {
-      driver = new _browserstackWebdriver2.default.Builder().usingServer('http://hub.browserstack.com/wd/hub').withCapabilities((0, _lodash.assign)({}, browser, {
+      driver = new (_get__('webdriver').Builder)().usingServer('http://hub.browserstack.com/wd/hub').withCapabilities(_get__('assign')({}, browser, {
         'browserstack.user': userName,
         'browserstack.key': accessToken,
         'loggingPrefs': { 'browser': 'ALL' }
       })).build();
 
-      return _bluebird2.default.race([_bluebird2.default.delay(DEFAULT_TIMEOUT).then(function () {
-        throw new Error('cannot connect to SauceLabs in ' + DEFAULT_TIMEOUT + ' ms');
+      return _get__('Promise').race([_get__('Promise').delay(_get__('DEFAULT_TIMEOUT')).then(function () {
+        throw new Error('cannot connect to SauceLabs in ' + _get__('DEFAULT_TIMEOUT') + ' ms');
       }), driver.session_.then(function (session) {
         return session;
       }, function (err) {
@@ -159,23 +159,23 @@ function createTest(browser, userName, accessToken) {
   }
 
   function _formatUrl(url) {
-    var _parseUrl = (0, _url.parse)(url);
+    var _get__2 = _get__('parseUrl')(url);
 
-    var protocol = _parseUrl.protocol;
-    var hostname = _parseUrl.hostname;
-    var port = _parseUrl.port;
-    var pathname = _parseUrl.pathname;
+    var protocol = _get__2.protocol;
+    var hostname = _get__2.hostname;
+    var port = _get__2.port;
+    var pathname = _get__2.pathname;
 
     return [protocol ? protocol + '//' : '', hostname, port && port !== 80 ? ':' + port : '', pathname].join('');
   }
 
   function getBrowserLogs(levelName) {
-    var level = (levels[levelName] || { value: 0 }).value || levels.INFO.value;
-    var logger = new _browserstackWebdriver2.default.WebDriver.Logs(driver);
+    var level = (_get__('levels')[levelName] || { value: 0 }).value || _get__('levels').INFO.value;
+    var logger = new (_get__('webdriver').WebDriver.Logs)(driver);
 
     return function () {
       return logger.getAvailableLogTypes().then(function (types) {
-        return Array.isArray(types) && types.indexOf('browser') !== -1 ? logger.get('browser') : _bluebird2.default.resolve([]);
+        return Array.isArray(types) && types.indexOf('browser') !== -1 ? logger.get('browser') : _get__('Promise').resolve([]);
       }, function () {
         return [];
       } // supress error
@@ -193,14 +193,14 @@ function createTest(browser, userName, accessToken) {
         browserLogsGot = logs.length;
 
         return notGot.filter(function (log) {
-          return levels[log.level.name].value >= level;
+          return _get__('levels')[log.level.name].value >= level;
         });
       }).then(function (logs) {
         return(
           // parse Firefox logs from addons and Chrome logs
           logs.map(function (log) {
             // parse logs from Firefox addons
-            var addonLog = log.message.match(firefoxAddonLogPattern);
+            var addonLog = log.message.match(_get__('firefoxAddonLogPattern'));
             if (addonLog) {
               return {
                 addon: true,
@@ -211,7 +211,7 @@ function createTest(browser, userName, accessToken) {
             }
 
             // parse logs from Chrome
-            var chromeLogMessage = log.message.match(chromeLogMessagePattern);
+            var chromeLogMessage = log.message.match(_get__('chromeLogMessagePattern'));
             if (chromeLogMessage) {
               return {
                 addon: chromeLogMessage[1].indexOf('chrome-extension://') === 0,
@@ -224,8 +224,8 @@ function createTest(browser, userName, accessToken) {
             }
 
             // parse logs from Android emulator
-            if (log.message.match(androidEmulatorLogMessagePattern)) {
-              var androidEmulatorBrowserMessage = log.message.match(androidEmulatorLogBrowserMessagePattern);
+            if (log.message.match(_get__('androidEmulatorLogMessagePattern'))) {
+              var androidEmulatorBrowserMessage = log.message.match(_get__('androidEmulatorLogBrowserMessagePattern'));
               if (androidEmulatorBrowserMessage) {
                 return {
                   addon: false,
@@ -260,7 +260,7 @@ function createTest(browser, userName, accessToken) {
           }).filter(function (log) {
             return !log.addon;
           }).filter(function (log) {
-            return !ignoredLogs.some(function (messageToIgnore) {
+            return !_get__('ignoredLogs').some(function (messageToIgnore) {
               return log.message.indexOf(messageToIgnore) > -1;
             });
           })
@@ -276,7 +276,7 @@ function createTest(browser, userName, accessToken) {
     // ex. MS Edge likes return arrays as object with numeric keys
     // on the other hand, strngification fails in IE 9, so we need a fallback
     return function () {
-      return driver.executeScript('try {\n        return JSON.stringify(' + RESULTS_ARRAY_NAME + ');\n      } catch(err) {\n        return ' + RESULTS_ARRAY_NAME + ';\n      }').then(function (jsonOrNot) {
+      return driver.executeScript('try {\n        return JSON.stringify(' + _get__('RESULTS_ARRAY_NAME') + ');\n      } catch(err) {\n        return ' + _get__('RESULTS_ARRAY_NAME') + ';\n      }').then(function (jsonOrNot) {
         try {
           return JSON.parse(jsonOrNot);
         } catch (err) {
@@ -300,9 +300,9 @@ function createTest(browser, userName, accessToken) {
 
   function open(url) {
     return function () {
-      return _bluebird2.default.race([_bluebird2.default.delay(DEFAULT_TIMEOUT).then(function () {
-        throw new Error('cannot open page ' + url + ' in ' + DEFAULT_TIMEOUT + ' ms');
-      }), driver.get(url).then(execute(RESULTS_ARRAY_NAME + ' = ' + RESULTS_ARRAY_NAME + ' || [];'))]);
+      return _get__('Promise').race([_get__('Promise').delay(_get__('DEFAULT_TIMEOUT')).then(function () {
+        throw new Error('cannot open page ' + url + ' in ' + _get__('DEFAULT_TIMEOUT') + ' ms');
+      }), driver.get(url).then(execute(_get__('RESULTS_ARRAY_NAME') + ' = ' + _get__('RESULTS_ARRAY_NAME') + ' || [];'))]);
     };
   }
 
@@ -372,7 +372,7 @@ function parseBrowser(browser, displayName) {
     'ios': 'MAC'
   }[browser.os.toLowerCase()] || browser.os;
 
-  var osVersion = osName === 'MAC' ? _osxVersions.numberToName[browser.osVersion.toLowerCase()] : browser.osVersion;
+  var osVersion = osName === 'MAC' ? _get__('osxVersions')[browser.osVersion.toLowerCase()] : browser.osVersion;
 
   var appium = false;
   var deviceName = (browser.device || '').toLowerCase();
@@ -427,16 +427,16 @@ function parseBrowser(browser, displayName) {
 
   if (!osVersion) {
     if (osName === 'Windows' && browserName === 'Internet Explorer') {
-      osVersion = osVersionForBrowser.ie[browser.version];
+      osVersion = _get__('osVersionForBrowser').ie[browser.version];
     }
 
     if (osName === 'Windows' && browserName === 'MicrosoftEdge') {
-      osVersion = osVersionForBrowser.edge[browser.version];
+      osVersion = _get__('osVersionForBrowser').edge[browser.version];
     }
 
     if (osName === 'OS X' && browserName === 'Safari') {
-      osVersion = osVersionForBrowser.safari[browser.version];
-      osVersion = _osxVersions.numberToName[osVersion] || osVersion;
+      osVersion = _get__('osVersionForBrowser').safari[browser.version];
+      osVersion = _get__('osxVersions')[osVersion] || osVersion;
     }
   }
 
@@ -445,13 +445,13 @@ function parseBrowser(browser, displayName) {
   };
 
   if (appium) {
-    (0, _lodash.assign)(config, {
+    _get__('assign')(config, {
       browserName: browserName,
       device: deviceName,
       platform: browserName === 'iPad' ? 'MAC' : 'ANDROID'
     });
   } else {
-    (0, _lodash.assign)(config, {
+    _get__('assign')(config, {
       browser: browserName,
       browser_version: browser.version,
       os: osName,
@@ -461,3 +461,146 @@ function parseBrowser(browser, displayName) {
 
   return config;
 }
+var _RewiredData__ = {};
+
+function _get__(variableName) {
+  return _RewiredData__ === undefined || _RewiredData__[variableName] === undefined ? _get_original__(variableName) : _RewiredData__[variableName];
+}
+
+function _get_original__(variableName) {
+  switch (variableName) {
+    case 'request':
+      return _requestPromise2.default;
+
+    case 'webdriver':
+      return _browserstackWebdriver2.default;
+
+    case 'assign':
+      return _lodash.assign;
+
+    case 'Promise':
+      return _bluebird2.default;
+
+    case 'DEFAULT_TIMEOUT':
+      return DEFAULT_TIMEOUT;
+
+    case 'parseUrl':
+      return _url.parse;
+
+    case 'levels':
+      return levels;
+
+    case 'firefoxAddonLogPattern':
+      return firefoxAddonLogPattern;
+
+    case 'chromeLogMessagePattern':
+      return chromeLogMessagePattern;
+
+    case 'androidEmulatorLogMessagePattern':
+      return androidEmulatorLogMessagePattern;
+
+    case 'androidEmulatorLogBrowserMessagePattern':
+      return androidEmulatorLogBrowserMessagePattern;
+
+    case 'ignoredLogs':
+      return ignoredLogs;
+
+    case 'RESULTS_ARRAY_NAME':
+      return RESULTS_ARRAY_NAME;
+
+    case 'osxVersions':
+      return _osxVersions.numberToName;
+
+    case 'osVersionForBrowser':
+      return osVersionForBrowser;
+  }
+
+  return undefined;
+}
+
+function _assign__(variableName, value) {
+  if (_RewiredData__ === undefined || _RewiredData__[variableName] === undefined) {
+    return _set_original__(variableName, value);
+  } else {
+    return _RewiredData__[variableName] = value;
+  }
+}
+
+function _set_original__(variableName, _value) {
+  switch (variableName) {}
+
+  return undefined;
+}
+
+function _update_operation__(operation, variableName, prefix) {
+  var oldValue = _get__(variableName);
+
+  var newValue = operation === '++' ? oldValue + 1 : oldValue - 1;
+
+  _assign__(variableName, newValue);
+
+  return prefix ? newValue : oldValue;
+}
+
+function _set__(variableName, value) {
+  return _RewiredData__[variableName] = value;
+}
+
+function _reset__(variableName) {
+  delete _RewiredData__[variableName];
+}
+
+function _with__(object) {
+  var rewiredVariableNames = Object.keys(object);
+  var previousValues = {};
+
+  function reset() {
+    rewiredVariableNames.forEach(function (variableName) {
+      _RewiredData__[variableName] = previousValues[variableName];
+    });
+  }
+
+  return function (callback) {
+    rewiredVariableNames.forEach(function (variableName) {
+      previousValues[variableName] = _RewiredData__[variableName];
+      _RewiredData__[variableName] = object[variableName];
+    });
+    var result = callback();
+
+    if (!!result && typeof result.then == 'function') {
+      result.then(reset).catch(reset);
+    } else {
+      reset();
+    }
+
+    return result;
+  };
+}
+
+var _RewireAPI__ = {};
+
+(function () {
+  function addPropertyToAPIObject(name, value) {
+    Object.defineProperty(_RewireAPI__, name, {
+      value: value,
+      enumerable: false,
+      configurable: true
+    });
+  }
+
+  addPropertyToAPIObject('__get__', _get__);
+  addPropertyToAPIObject('__GetDependency__', _get__);
+  addPropertyToAPIObject('__Rewire__', _set__);
+  addPropertyToAPIObject('__set__', _set__);
+  addPropertyToAPIObject('__reset__', _reset__);
+  addPropertyToAPIObject('__ResetDependency__', _reset__);
+  addPropertyToAPIObject('__with__', _with__);
+})();
+
+exports.__get__ = _get__;
+exports.__GetDependency__ = _get__;
+exports.__Rewire__ = _set__;
+exports.__set__ = _set__;
+exports.__ResetDependency__ = _reset__;
+exports.__RewireAPI__ = _RewireAPI__;
+exports.default = _RewireAPI__;

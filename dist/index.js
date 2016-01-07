@@ -7,15 +7,12 @@ var _providers;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.__RewireAPI__ = exports.__ResetDependency__ = exports.__set__ = exports.__Rewire__ = exports.__GetDependency__ = exports.__get__ = undefined;
 exports.default = run;
 
-var _lodash = require('lodash');
+var _ramda = require('ramda');
 
 var _promisesUtil = require('./promises-util');
-
-var _parseBrowsers = require('./parse-browsers');
-
-var _parseBrowsers2 = _interopRequireDefault(_parseBrowsers);
 
 var _saucelabs = require('./providers/saucelabs');
 
@@ -27,11 +24,14 @@ var BrowserStack = _interopRequireWildcard(_browserstack);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var providers = (_providers = {}, _defineProperty(_providers, SauceLabs.name, SauceLabs), _defineProperty(_providers, BrowserStack.name, BrowserStack), _providers);
+var isObject = _get__('is')(Object);
+var isString = _get__('is')(String);
+
+var providers = (_providers = {}, _defineProperty(_providers, _get__('SauceLabs').name, _get__('SauceLabs')), _defineProperty(_providers, _get__('BrowserStack').name, _get__('BrowserStack')), _providers);
 
 /**
  * @function run
@@ -72,34 +72,30 @@ function run() {
   var _ref$timeout = _ref.timeout;
   var timeout = _ref$timeout === undefined ? 1000 : _ref$timeout;
 
-  if (!providers.hasOwnProperty(provider)) {
-    throw new Error('Provider "' + provider + '" is not available. Use one of those: ' + Object.keys(providers).join(','));
+  if (!_get__('providers').hasOwnProperty(provider)) {
+    throw new Error('Provider "' + provider + '" is not available. Use one of those: ' + Object.keys(_get__('providers')).join(','));
   }
 
-  if (!(0, _lodash.isString)(code)) {
+  if (!_get__('isString')(code)) {
     throw new TypeError('"code" must be a string');
   }
 
-  if (!(0, _lodash.isObject)(credentials) || (0, _lodash.isNull)(credentials) || !(0, _lodash.isString)(credentials.userName) || !(0, _lodash.isString)(credentials.accessToken)) {
+  if (!_get__('isObject')(credentials) || _get__('isNil')(credentials) || !_get__('isString')(credentials.userName) || !_get__('isString')(credentials.accessToken)) {
     throw new TypeError('"credentials" must be an object with not empty fields "userName" and "accessToken"');
   }
 
-  var parsed = (0, _parseBrowsers2.default)(browsers);
+  var _get__$provider = _get__('providers')[provider];
 
-  var _providers$provider = providers[provider];
-  var createTest = _providers$provider.createTest;
-  var getConcurrencyLimit = _providers$provider.getConcurrencyLimit;
-  var parseBrowser = _providers$provider.parseBrowser;
+  var createTest = _get__$provider.createTest;
+  var getConcurrencyLimit = _get__$provider.getConcurrencyLimit;
+  var parseBrowser = _get__$provider.parseBrowser;
   var userName = credentials.userName;
   var accessToken = credentials.accessToken;
 
   // define tests for all the websites in all browsers (from current config file)
 
-  var testingSessions = Object.keys(parsed).map(function (browserName) {
-    var browserConfig = (0, _lodash.extend)(parseBrowser(parsed[browserName], browserName), {
-      displayName: browserName
-    });
-
+  var testingSessions = browsers.map(function (browser) {
+    var browserConfig = parseBrowser(browser);
     return {
       test: createTest(browserConfig, userName, accessToken),
       browser: browserConfig
@@ -111,7 +107,7 @@ function run() {
     var browserName = browser.displayName;
 
     function print(message) {
-      return (0, _promisesUtil.andReturn)(function () {
+      return _get__('andReturn')(function () {
         return Promise.resolve(verbose ? console.log(browserName + ' - ' + message) : 0);
       });
     }
@@ -121,7 +117,7 @@ function run() {
       // wait a while for script execution; later on some callback-based
       // solution should be used
       .then(test.sleep(timeout)).then(function () {
-        return Promise.all([(0, _promisesUtil.call)(test.getResults()).then(print('results gathered')), (0, _promisesUtil.call)(test.getBrowserLogs()).then(print('logs gathered'))]).then(function (_ref3) {
+        return Promise.all([_get__('call')(test.getResults()).then(print('results gathered')), _get__('call')(test.getBrowserLogs()).then(print('logs gathered'))]).then(function (_ref3) {
           var _ref4 = _slicedToArray(_ref3, 2);
 
           var results = _ref4[0];
@@ -134,7 +130,7 @@ function run() {
         });
       }).then(
       // quit no matter if test succeed or not
-      (0, _promisesUtil.andReturn)(test.quit()), (0, _promisesUtil.andThrow)(test.quit())).catch(function (err) {
+      _get__('andReturn')(test.quit()), _get__('andThrow')(test.quit())).catch(function (err) {
         // suppress any error
         // we don't want to break a chain, but continue tests in other browsers
         return {
@@ -151,7 +147,7 @@ function run() {
 
   // run all tests with some concurrency
   return getConcurrencyLimit(userName, accessToken).then(function (concurrencyLimit) {
-    return (0, _promisesUtil.concurrent)(testingSessions, concurrencyLimit).then(function (resultsForAllTests) {
+    return _get__('concurrent')(testingSessions, concurrencyLimit).then(function (resultsForAllTests) {
       return resultsForAllTests.reduce(function (map) {
         var _ref5 = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
 
@@ -166,3 +162,154 @@ function run() {
     });
   });
 }
+var typeOfOriginalExport = typeof print === 'undefined' ? 'undefined' : _typeof(print);
+
+function addNonEnumerableProperty(name, value) {
+  Object.defineProperty(print, name, {
+    value: value,
+    enumerable: false,
+    configurable: true
+  });
+}
+
+if ((typeOfOriginalExport === 'object' || typeOfOriginalExport === 'function') && Object.isExtensible(print)) {
+  addNonEnumerableProperty('__get__', _get__);
+  addNonEnumerableProperty('__GetDependency__', _get__);
+  addNonEnumerableProperty('__Rewire__', _set__);
+  addNonEnumerableProperty('__set__', _set__);
+  addNonEnumerableProperty('__reset__', _reset__);
+  addNonEnumerableProperty('__ResetDependency__', _reset__);
+  addNonEnumerableProperty('__with__', _with__);
+  addNonEnumerableProperty('__RewireAPI__', _RewireAPI__);
+}
+
+var _RewiredData__ = {};
+
+function _get__(variableName) {
+  return _RewiredData__ === undefined || _RewiredData__[variableName] === undefined ? _get_original__(variableName) : _RewiredData__[variableName];
+}
+
+function _get_original__(variableName) {
+  switch (variableName) {
+    case 'is':
+      return _ramda.is;
+
+    case 'SauceLabs':
+      return SauceLabs;
+
+    case 'BrowserStack':
+      return BrowserStack;
+
+    case 'providers':
+      return providers;
+
+    case 'isString':
+      return isString;
+
+    case 'isObject':
+      return isObject;
+
+    case 'isNil':
+      return _ramda.isNil;
+
+    case 'andReturn':
+      return _promisesUtil.andReturn;
+
+    case 'call':
+      return _promisesUtil.call;
+
+    case 'andThrow':
+      return _promisesUtil.andThrow;
+
+    case 'concurrent':
+      return _promisesUtil.concurrent;
+  }
+
+  return undefined;
+}
+
+function _assign__(variableName, value) {
+  if (_RewiredData__ === undefined || _RewiredData__[variableName] === undefined) {
+    return _set_original__(variableName, value);
+  } else {
+    return _RewiredData__[variableName] = value;
+  }
+}
+
+function _set_original__(variableName, _value) {
+  switch (variableName) {}
+
+  return undefined;
+}
+
+function _update_operation__(operation, variableName, prefix) {
+  var oldValue = _get__(variableName);
+
+  var newValue = operation === '++' ? oldValue + 1 : oldValue - 1;
+
+  _assign__(variableName, newValue);
+
+  return prefix ? newValue : oldValue;
+}
+
+function _set__(variableName, value) {
+  return _RewiredData__[variableName] = value;
+}
+
+function _reset__(variableName) {
+  delete _RewiredData__[variableName];
+}
+
+function _with__(object) {
+  var rewiredVariableNames = Object.keys(object);
+  var previousValues = {};
+
+  function reset() {
+    rewiredVariableNames.forEach(function (variableName) {
+      _RewiredData__[variableName] = previousValues[variableName];
+    });
+  }
+
+  return function (callback) {
+    rewiredVariableNames.forEach(function (variableName) {
+      previousValues[variableName] = _RewiredData__[variableName];
+      _RewiredData__[variableName] = object[variableName];
+    });
+    var result = callback();
+
+    if (!!result && typeof result.then == 'function') {
+      result.then(reset).catch(reset);
+    } else {
+      reset();
+    }
+
+    return result;
+  };
+}
+
+var _RewireAPI__ = {};
+
+(function () {
+  function addPropertyToAPIObject(name, value) {
+    Object.defineProperty(_RewireAPI__, name, {
+      value: value,
+      enumerable: false,
+      configurable: true
+    });
+  }
+
+  addPropertyToAPIObject('__get__', _get__);
+  addPropertyToAPIObject('__GetDependency__', _get__);
+  addPropertyToAPIObject('__Rewire__', _set__);
+  addPropertyToAPIObject('__set__', _set__);
+  addPropertyToAPIObject('__reset__', _reset__);
+  addPropertyToAPIObject('__ResetDependency__', _reset__);
+  addPropertyToAPIObject('__with__', _with__);
+})();
+
+exports.__get__ = _get__;
+exports.__GetDependency__ = _get__;
+exports.__Rewire__ = _set__;
+exports.__set__ = _set__;
+exports.__ResetDependency__ = _reset__;
+exports.__RewireAPI__ = _RewireAPI__;

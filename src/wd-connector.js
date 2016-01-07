@@ -1,4 +1,4 @@
-import { identity, contains } from 'lodash';
+import { identity, contains } from 'ramda';
 import Promise from 'bluebird';
 
 import {
@@ -9,6 +9,7 @@ import {
 
 
 const RESULTS_ARRAY_NAME = 'window.__results__';
+const containsBrowser = contains('browser');
 
 
 /**
@@ -33,7 +34,14 @@ export default function createConnector(Provider) {
    *
    * @return {Object} connection object
    */
-  return function connect(browser, userName, accessToken) {
+  const exports = function connect(browser, userName, accessToken) {
+    /**
+     * @type {Object} Connection
+     * @description this object gives access to high-level methods accessing
+     *   Selenium/Appium server; EACH its method is a factory function, accepting
+     *   some configuration and returning function that actually does something
+     *   and returns promise
+     */
     return {
       /**
        * @member {BrowserLog[]} _browserLogs
@@ -68,7 +76,7 @@ export default function createConnector(Provider) {
        */
       enter() {
         return () => {
-          this._driver = new Provider({ userName, accessToken });
+          this._driver = new Provider(userName, accessToken);
 
           return Promise.race([
             Promise.delay(Provider.TIMEOUT).then(() => {
@@ -136,7 +144,7 @@ export default function createConnector(Provider) {
 
         return () => this._driver.getLogTypes().then(
           (types) =>
-            (contains(types, 'browser') ?
+            (containsBrowser(types) ?
               this._driver.getLogs('browser') :
               Promise.resolve([])
             ),
@@ -214,8 +222,12 @@ export default function createConnector(Provider) {
        *   @returns {Promise}
        */
       sleep(time) {
-        return () =>this._driver.sleep(time);
+        return () => this._driver.sleep(time);
       }
     };
   };
+
+  exports.getConcurrencyLimit = Provider.getConcurrencyLimit;
+
+  return exports;
 }

@@ -1,4 +1,4 @@
-import { isObject, contains, invert } from 'lodash';
+import { is, contains, invertObj } from 'ramda';
 import { parse as parseUrl } from 'url';
 
 
@@ -144,7 +144,7 @@ export function parse(log) {
     parsed = JSON.parse(log.message);
   } catch(err) { }
 
-  if(parsed && isObject(parsed.message)) {
+  if(parsed && is(Object, parsed.message)) {
     return {
       timestamp: Math.round(parsed.message.timestamp * 1000),
       level: parsed.message.level.toUpperCase(),
@@ -166,7 +166,7 @@ export function parse(log) {
  * @returns {Boolean} true if log should be ignored
  */
 export function isIgnored(log) {
-  return log.addon || contains(IGNORED_LOGS, log.message);
+  return log.addon || contains(log.message)(IGNORED_LOGS);
 }
 
 
@@ -190,7 +190,7 @@ export const byName = {
  * @access public
  * @description map from log level numeric value to its name
  */
-export const byValue = invert(byName);
+export const byValue = invertObj(byName);
 
 
 /**

@@ -1,5 +1,5 @@
 /* global suite, test, setup, teardown */
-import { assign } from 'lodash';
+import { merge, mergeAll } from 'ramda';
 import { default as chai, assert } from 'chai';
 import chaiSpies from 'chai-spies';
 import chaiSpiesTdd from 'chai-spies-tdd';
@@ -22,11 +22,10 @@ import { default as run, __RewireAPI__ as RewireAPI } from '../src/index';
 RewireAPI.__Rewire__('providers', {
   test: {
     getConcurrencyLimit: () => Promise.resolve(1),
-    parseBrowser: (browser, browserName) => assign({ displayName: browserName }, browser),
+    parseBrowser: (browser, browserName) => merge({ displayName: browserName }, browser),
     createTest: createTestMock
   }
 });
-RewireAPI.__Rewire__('parseBrowsers', (browsers) => browsers);
 
 
 const VALID_CONFIG = {
@@ -41,7 +40,7 @@ const VALID_CONFIG = {
 
 
 function overwrite(base, src) {
-  return assign({}, base, src);
+  return mergeAll([{}, base, src]);
 }
 
 suite('API', () => {

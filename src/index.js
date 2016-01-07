@@ -1,14 +1,14 @@
 import {
-  extend,
-  isNull,
-  isObject,
-  isString
-} from 'lodash';
+  isNil,
+  is
+} from 'ramda';
 
 import { concurrent, andReturn, andThrow, call } from './promises-util';
-import parseBrowsers from './parse-browsers';
 import * as SauceLabs from './providers/saucelabs';
 import * as BrowserStack from './providers/browserstack';
+
+const isObject = is(Object);
+const isString = is(String);
 
 
 const providers = {
@@ -56,25 +56,20 @@ export default function run({
     throw new TypeError('"code" must be a string');
   }
 
-  if(!isObject(credentials) || isNull(credentials) ||
+  if(!isObject(credentials) || isNil(credentials) ||
     !isString(credentials.userName) ||
     !isString(credentials.accessToken)
   ) {
     throw new TypeError('"credentials" must be an object with not empty fields "userName" and "accessToken"');
   }
 
-  const parsed = parseBrowsers(browsers);
-
   const { createTest, getConcurrencyLimit, parseBrowser } = providers[provider];
   const { userName, accessToken } = credentials;
 
   // define tests for all the websites in all browsers (from current config file)
-  const testingSessions = Object.keys(parsed)
-  .map((browserName) => {
-    const browserConfig = extend(parseBrowser(parsed[browserName], browserName), {
-      displayName: browserName
-    });
-
+  const testingSessions = browsers
+  .map((browser) => {
+    const browserConfig = parseBrowser(browser);
     return {
       test: createTest(browserConfig, userName, accessToken),
       browser: browserConfig

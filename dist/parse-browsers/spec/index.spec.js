@@ -3,26 +3,67 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.__RewireAPI__ = exports.__ResetDependency__ = exports.__set__ = exports.__Rewire__ = exports.__GetDependency__ = exports.__get__ = exports.nameToNuber = exports.numberToName = undefined;
+exports.__RewireAPI__ = exports.__ResetDependency__ = exports.__set__ = exports.__Rewire__ = exports.__GetDependency__ = exports.__get__ = undefined;
 
-var _lodash = require('lodash');
+var _chai = require('chai');
 
-/**
- * @module osx-versions
- * @description mapping from Apple OS X version name to number and to opposite
- *   direction
- */
+var _chai2 = _interopRequireDefault(_chai);
 
-var numberToName = exports.numberToName = {
-  '10.6': 'Snow Leopard',
-  '10.7': 'Lion',
-  '10.8': 'Mountain Lion',
-  '10.9': 'Mavericks',
-  '10.10': 'Yosemite',
-  '10.11': 'El Capitan'
-};
+var _chaiSpies = require('chai-spies');
 
-var nameToNuber = exports.nameToNuber = _get__('invert')(_get__('numberToName'));
+var _chaiSpies2 = _interopRequireDefault(_chaiSpies);
+
+var _chaiSpiesTdd = require('chai-spies-tdd');
+
+var _chaiSpiesTdd2 = _interopRequireDefault(_chaiSpiesTdd);
+
+var _index = require('../index');
+
+var _index2 = _interopRequireDefault(_index);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+_get__('chai').use(_get__('chaiSpies')); /* global suite, test, setup, teardown */
+
+_get__('chai').use(_get__('chaiSpiesTdd'));
+
+suite('parse-browsers', function () {
+  suite('API', function () {
+    test('export type', function () {
+      _get__('assert').isFunction(_get__('parseBrowsers'), 'parseBrowsers is a function');
+    });
+  });
+
+  suite('single version entries', function () {
+    test('parsing complete entries', function () {
+      var CHROME = {
+        displayName: 'Chrome 40',
+        name: 'Chrome',
+        version: '40',
+        os: 'Windows',
+        osVersion: '7'
+      };
+      var FF = {
+        displayName: 'Firefox 42',
+        name: 'Firefox',
+        version: '42',
+        os: 'OS X',
+        osVersion: '10.10'
+      };
+
+      var result = _get__('parseBrowsers')([CHROME, FF]);
+      _get__('assert').sameDeepMembers([CHROME, FF]);
+    });
+
+    test('firefox logs', function () {});
+
+    test('firefox addon logs', function () {});
+
+    test('android emulator logs', function () {});
+
+    test('custom logs', function () {});
+  });
+});
 var _RewiredData__ = {};
 
 function _get__(variableName) {
@@ -31,11 +72,20 @@ function _get__(variableName) {
 
 function _get_original__(variableName) {
   switch (variableName) {
-    case 'invert':
-      return _lodash.invert;
+    case 'chai':
+      return _chai2.default;
 
-    case 'numberToName':
-      return numberToName;
+    case 'chaiSpies':
+      return _chaiSpies2.default;
+
+    case 'chaiSpiesTdd':
+      return _chaiSpiesTdd2.default;
+
+    case 'assert':
+      return _chai.assert;
+
+    case 'parseBrowsers':
+      return _index2.default;
   }
 
   return undefined;
