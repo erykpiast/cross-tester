@@ -39,6 +39,8 @@
     "ramda": "^0.19.1",
     "browserstack-webdriver": "^2.41.1",
     "minimist": "^1.2.0",
+    "compare-semver": "^1.1.0",
+    "ramda": "^0.19.1",
     "request-promise": "^1.0.2",
     "wd": "^0.4.0"
   },
