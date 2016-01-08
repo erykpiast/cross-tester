@@ -83,7 +83,7 @@ const config = {
     JSON.parse((args.code || args.b)) :
     defaultConfig.browsers,
   code: args.code || args.c || defaultConfig.code,
-  url: args.code || args.s || undefined,
+  url: args.code || args.s || void 0,
   provider: args.provider || args.p || defaultConfig.provider,
   verbose: true,
   timeout: (args.code || args.s) ? 2000 : 1000
