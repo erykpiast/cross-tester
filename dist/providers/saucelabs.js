@@ -1,5 +1,8 @@
 'use strict';
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+// it's soo cool to override globals! (yes, Promise is one for some time)
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
@@ -31,9 +34,6 @@ var osVersionForBrowser = _interopRequireWildcard(_systemBrowsers);
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
-// it's soo cool to override globals! (yes, Promise is one for some time)
 
 var levels = {
   'SEVERE': {
@@ -335,7 +335,7 @@ function createTest(browser, userName, accessToken) {
  *   @property {String} device
  */
 function parseBrowser(browser, displayName) {
-  var browserName = ({
+  var browserName = {
     'microsoft edge': 'MicrosoftEdge',
     'edge': 'MicrosoftEdge',
     'ie': 'internet explorer',
@@ -348,9 +348,9 @@ function parseBrowser(browser, displayName) {
     'iphone': 'Safari',
     'ipad': 'Safari',
     'android browser': 'Android'
-  })[browser.name.toLowerCase()] || browser.name;
+  }[browser.name.toLowerCase()] || browser.name;
 
-  var osName = ({
+  var osName = {
     'win': 'Windows',
     'windows': 'Windows',
     'mac': 'OS X',
@@ -358,9 +358,9 @@ function parseBrowser(browser, displayName) {
     'ios': 'iOS',
     'android': 'Android',
     'linux': 'Linux'
-  })[browser.os.toLowerCase()] || browser.os;
+  }[browser.os.toLowerCase()] || browser.os;
 
-  var osVersion = (({
+  var osVersion = ({
     'OS X': {
       'Snow Leopard': '10.6',
       'Lion': '10.7',
@@ -369,7 +369,7 @@ function parseBrowser(browser, displayName) {
       'Yosemite': '10.10',
       'El Capitan': '10.11'
     }
-  })[osName] || {})[browser.osVersion.toLowerCase()] || browser.osVersion;
+  }[osName] || {})[browser.osVersion.toLowerCase()] || browser.osVersion;
 
   var appium = false;
   var appiumLegacy = false;
@@ -402,12 +402,12 @@ function parseBrowser(browser, displayName) {
 
     if (isNaN(parseFloat(osVersion, 10))) {
       // find numeric version by name
-      osVersion = ({
+      osVersion = {
         'lolipop': '5.1',
         'kitkat': '4.4',
         'jelly bean': '4.3',
         'ice cream sandwich': '4.0'
-      })[osVersion.toLowerCase()];
+      }[osVersion.toLowerCase()];
     }
 
     // for some reason platform is different for older Androids

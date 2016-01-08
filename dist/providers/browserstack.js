@@ -1,5 +1,8 @@
 'use strict';
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+// it's soo cool to override globals! (yes, Promise is one for some time)
+
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
@@ -33,9 +36,6 @@ var _osxVersions = require('../osx-versions');
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
-// it's soo cool to override globals! (yes, Promise is one for some time)
 
 var levels = {
   'SEVERE': {
@@ -350,7 +350,7 @@ function createTest(browser, userName, accessToken) {
  *   @property {String} os_version
  */
 function parseBrowser(browser, displayName) {
-  var browserName = ({
+  var browserName = {
     'microsoft edge': 'Edge',
     'edge': 'Edge',
     'ie': 'IE',
@@ -364,13 +364,13 @@ function parseBrowser(browser, displayName) {
     'iphone': 'Safari',
     'ipad': 'Safari',
     'android browser': 'Android'
-  })[browser.name.toLowerCase()] || browser.name;
+  }[browser.name.toLowerCase()] || browser.name;
 
-  var osName = ({
+  var osName = {
     'mac': 'OS X',
     'android': 'ANDROID',
     'ios': 'MAC'
-  })[browser.os.toLowerCase()] || browser.os;
+  }[browser.os.toLowerCase()] || browser.os;
 
   var osVersion = osName === 'MAC' ? _osxVersions.numberToName[browser.osVersion.toLowerCase()] : browser.osVersion;
 
@@ -385,23 +385,23 @@ function parseBrowser(browser, displayName) {
     // general names like iPhone or iPad are not enough too
     if ((!deviceName || deviceName === 'iphone' || deviceName === 'ipad') && browser.osVersion) {
       if (deviceName === 'iphone') {
-        deviceName = ({
+        deviceName = {
           '8': 'iPhone 6',
           '8.3': 'iPhone 6',
           '7': 'iPhone 5S',
           '6': 'iPhone 5',
           '5.1': 'iPhone 4S',
           '5': 'iPhone 4S'
-        })[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
+        }[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
       } else {
-        deviceName = ({
+        deviceName = {
           '8': 'iPad Air',
           '8.3': 'iPad Air',
           '7': 'iPad 4th',
           '6': 'iPad 3rd (6.0)',
           '5.1': 'iPad 3rd',
           '5': 'iPad 2 (5.0)'
-        })[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
+        }[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
       }
     }
   } else if (browserName === 'Android') {
@@ -410,7 +410,7 @@ function parseBrowser(browser, displayName) {
 
     // find device based on OS version
     if (!deviceName && browser.osVersion) {
-      deviceName = ({
+      deviceName = {
         '5': 'Google Nexus 5',
         'lollipop': 'Google Nexus 5',
         '4.4': 'Samsung Galaxy S5',
@@ -421,7 +421,7 @@ function parseBrowser(browser, displayName) {
         '4.1': 'Samsung Galaxy S3',
         '4': 'Google Nexus',
         'ice cream sandwich': 'Google Nexus'
-      })[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
+      }[browser.osVersion.toLowerCase().replace(/\.0$/, '')];
     }
   }
 
