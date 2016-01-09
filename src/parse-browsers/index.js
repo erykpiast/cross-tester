@@ -1,15 +1,16 @@
 import {
-  mergeAll,
   pickBy,
   complement,
   is,
   pipe,
   map,
   flatten,
-  contains
+  contains,
+  isNil
 } from 'ramda';
 import {
-  OS
+  OS,
+  BROWSER
 } from './constants';
 import {
   browserVersion as guessBrowserVersion,
@@ -30,6 +31,8 @@ const isArray = is(Array);
 const isUndefined = (v) => 'undefined' === typeof v;
 const entries = (o) => Object.keys(o).map((key) => [o[key], key]);
 const omitUndefinedKeys = pickBy(complement(isUndefined));
+const toLowerCase = (v) => isNil(v) ? v : v.toString().toLowerCase();
+const mapToLowerCase = map(toLowerCase);
 
 /**
  * @type {Object} BrowserDefinition
@@ -155,7 +158,8 @@ function _parseSingleVersionDefinition(browser, displayName) {
  */
 function _parseMultiVersionDefinition(browser, displayName) {
   return pipe(
-    map((version, versionName) => {
+    entries,
+    map(([ version, versionName ]) => {
       if(isObject(version)) {
         const browserName = normalizeBrowserName(browser.name);
         if (isUndefined(browserName)) {
@@ -190,9 +194,10 @@ function _parseMultiVersionDefinition(browser, displayName) {
         });
       }
 
-      return _parseSingleVersionDefinition(mergeAll([{}, browser, {
-        version
-      }]), `${displayName} ${versionName}`);
+      return _parseSingleVersionDefinition(
+        { ...browser, version },
+        `${displayName} ${versionName}`
+      );
     }),
     flatten
   )(browser.versions);
@@ -224,6 +229,11 @@ function _createBrowserDefinitionObject({
     }
   }
 
+  // NOTE: it's special case
+  if ((browserName === BROWSER.SAFARI) && (osName === OS.IOS)) {
+    browserName = BROWSER.SAFARI_MOBILE;
+  }
+
   if(isUndefined(deviceName) && _isDeviceNameRequired(osName)) {
     deviceName = guessDeviceName(osName, browserName);
 
@@ -241,12 +251,13 @@ function _createBrowserDefinitionObject({
   }
 
   return {
-    displayName: displayName,
-    name: browserName,
-    version: browserVersion,
-    os: osName,
-    osVersion: osVersion,
-    device: deviceName
+    displayName, ...mapToLowerCase({
+      name: browserName,
+      version: browserVersion,
+      os: osName,
+      osVersion: osVersion,
+      device: deviceName
+    })
   };
 }
 /* eslint-enable no-param-reassign */

@@ -56,7 +56,7 @@ export function osName(bn) {
   }
 
   if ((bn === BROWSER.SAFARI) || (bn === BROWSER.CHROME)) {
-    return OS.MAC;
+    return OS.OSX;
   }
 
   if (bn === BROWSER.FF) {
