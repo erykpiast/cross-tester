@@ -1,16 +1,25 @@
 /**
+ * @module constants
+ * @description only source of names; ANY name should be hardcoded, constant
+ *   have to be used EVERYWHERE
+ *
+ *   NOTE: lower case letters are intentional, it's easier to follow convention
+ *   everywhere and use simple === to compare strings
+ */
+
+/**
  * @constant {Object} BROWSER
  * @access public
  * @description collection of normalized browser names
  */
 export const BROWSER = {
-  IE: 'Internet Explorer',
-  FF: 'Firefox',
-  CHROME: 'Chrome',
-  SAFARI: 'Safari',
-  EDGE: 'Edge',
-  ANDROID: 'Android Browser',
-  SAFARI_MOBILE: 'Safari Mobile'
+  IE: 'internet explorer',
+  FF: 'firefox',
+  CHROME: 'chrome',
+  SAFARI: 'safari',
+  EDGE: 'edge',
+  ANDROID: 'android browser',
+  SAFARI_MOBILE: 'safari mobile'
 };
 
 
@@ -23,6 +32,7 @@ export const BROWSER_ALIAS = {
   [BROWSER.IE]: [
     'ie',
     'msie',
+    'explorer',
     'internet explorer',
     'ms internet explorer',
     'microsoft internet explorer'
@@ -30,7 +40,8 @@ export const BROWSER_ALIAS = {
   [BROWSER.FF]: [
     'ff',
     'firefox',
-    'mozilla firefox'
+    'mozilla firefox',
+    'mozilla'
   ],
   [BROWSER.CHROME]: [
     'chrome',
@@ -67,11 +78,11 @@ export const BROWSER_ALIAS = {
  * @description collection of normalized OS names
  */
 export const OS = {
-  IOS: 'iOS',
-  ANDROID: 'Android',
-  WINDOWS: 'Windows',
-  OSX: 'OS X',
-  LINUX: 'Linux'
+  IOS: 'ios',
+  ANDROID: 'android',
+  WINDOWS: 'windows',
+  OSX: 'os x',
+  LINUX: 'linux'
 };
 
 
@@ -87,7 +98,7 @@ export const OS_PREFERABLE_VERSION = {
   [OS.ANDROID]: '5.0',
   [OS.WINDOWS]: '7',
   [OS.OSX]: '10.11',
-  [OS.LINUX]: 'Linux'
+  [OS.LINUX]: 'linux'
 };
 
 
@@ -134,18 +145,18 @@ export const OS_ALIAS = {
  */
 export const OS_VERSION_MAPPING = {
   [OS.ANDROID]: {
-    'Ice Cream Sandwich': '4',
-    'Jelly Bean': '4.3',
-    'KitKat': '4.4',
-    'Lollipop': '5.1'
+    'ice cream sandwich': '4',
+    'jelly bean': '4.3',
+    'kitkat': '4.4',
+    'lollipop': '5.1'
   },
   [OS.OSX]: {
-    'Snow Leopard': '10.6',
-    'Lion': '10.7',
-    'Mountain Lion': '10.8',
-    'Mavericks': '10.9',
-    'Yosemite': '10.10',
-    'El Capitan': '10.11'
+    'snow leopard': '10.6',
+    'lion': '10.7',
+    'mountain lion': '10.8',
+    'mavericks': '10.9',
+    'yosemite': '10.10',
+    'el capitan': '10.11'
   }
 };
 
@@ -183,9 +194,9 @@ export const SYSTEM_BROWSER = {
  * @description collection of normalized device names
  */
 export const DEVICE = {
-  IPHONE: 'iPhone',
-  IPAD: 'iPad',
-  ANDROID_EMULATOR: 'Android Emulator',
-  IPHONE_SIMULATOR: 'iPhone Simulator',
-  IPAD_SIMULATOR: 'iPad Simulator'
+  IPHONE: 'iphone',
+  IPAD: 'ipad',
+  ANDROID_EMULATOR: 'android emulator',
+  IPHONE_SIMULATOR: 'iphone simulator',
+  IPAD_SIMULATOR: 'ipad simulator'
 };
