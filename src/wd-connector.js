@@ -76,7 +76,13 @@ export default function createConnector(Provider) {
        */
       enter() {
         return () => {
-          this._driver = new Provider(userName, accessToken);
+          try {
+            // the third argument is used by TestProvider
+            this._driver = new Provider(userName, accessToken, browser.displayName);
+          } catch(err) {
+            console.error(err.stack);
+            throw new Error('error when instantiating Provider');
+          }
 
           return Promise.race([
             Promise.delay(Provider.TIMEOUT).then(() => {
@@ -84,7 +90,7 @@ export default function createConnector(Provider) {
             }),
             this._driver.init(browser)
               .then(identity, (err) => {
-                throw new Error(`error for browser ${browser.browserName} ${browser.version}: ${err.message}`);
+                throw new Error(`error for browser ${browser.name} ${browser.version}: ${err.message}`);
               })
           ]);
         };
@@ -143,14 +149,14 @@ export default function createConnector(Provider) {
         const level = logLevelByName[levelName] || logLevelByName.ERROR;
 
         return () => this._driver.getLogTypes().then(
-          (types) =>
+          (types = []) =>
             (containsBrowser(types) ?
               this._driver.getLogs('browser') :
               Promise.resolve([])
             ),
           () => [] // supress error
         )
-        .then((logs) => {
+        .then((logs = []) => {
           this._browserLogs.push(...logs);
           const notGot = this._browserLogs.slice(this._browserLogsGot);
           this._browserLogsGot = this._browserLogs.length;

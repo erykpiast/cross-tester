@@ -2,76 +2,22 @@
 
 import parseArgs from 'minimist';
 import { inspect } from 'util';
+import { readFileSync } from 'fs';
 import run from './index';
+import SauceLabsProvider from './wd-providers/saucelabs';
 
 const args = parseArgs(process.argv.slice(2));
 
 const defaultConfig = {
-  provider: 'saucelabs',
+  provider: SauceLabsProvider,
   code: 'var x = 3; window.__results__.push(window.navigator.userAgent);',
-  browsers: {
-    'Google Chrome': {
-      name: 'chrome',
-      versions: {
-        latest: '46'
-      },
-      os: 'Windows'
-    },
-    'Mozilla Firefox': {
-      name: 'Firefox',
-      versions: {
-        latest: '42'
-      },
-      os: 'Windows'
-    },
-    'Microsoft Internet Explorer': {
-      name: 'Internet Explorer',
-      versions: {
-        latest: '11',
-        previous: '10',
-        old: '9'
-      },
-      os: 'Windows'
-    },
-    'Apple Safari': {
-      name: 'Safari',
-      versions: {
-        latest: '9',
-        previous: '8',
-        old: '7'
-      },
-      os: 'OS X'
-    },
-    'Microsoft Edge': {
-      name: 'Microsoft Edge',
-      versions: {
-        latest: '20', // works in SL
-        previous: '12' // works in BS
-      },
-      os: 'Windows'
-    },
-    'Safari Mobile': {
-      name: 'Safari',
-      versions: {
-        latest: {
-          osVersion: '8.3',
-          devices: ['iPhone', 'iPad']
-        },
-        previous: {
-          osVersion: '7.0',
-          devices: ['iPhone', 'iPad']
-        }
-      },
-      os: 'iOS'
-    },
-    'Android Browser': {
-      name: 'Android Browser',
-      versions: {
-        'Lollipop': '5.0',
-        'Jelly Bean': 'Jelly Bean'
-      }
-    }
-  }
+  browsers: [{
+    displayName: 'Google Chrome',
+    name: 'chrome',
+    version: '46',
+    os: 'Windows',
+    osVersion: '7'
+  }]
 };
 
 const config = {
@@ -79,8 +25,8 @@ const config = {
     userName: args.user || args.u,
     accessToken: args.token || args.t
   },
-  browsers: (args.code || args.b) ?
-    JSON.parse((args.code || args.b)) :
+  browsers: (args.browsers || args.b) ?
+    JSON.parse(readFileSync(args.browsers || args.b).toString()) :
     defaultConfig.browsers,
   code: args.code || args.c || defaultConfig.code,
   url: args.code || args.s || void 0,

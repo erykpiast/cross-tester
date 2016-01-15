@@ -1,14 +1,13 @@
-import { merge, nth } from 'ramda';
+import { merge, identity, invertObj } from 'ramda';
 import webdriver from 'wd';
 import request from 'request-promise';
-import { lt as versionIsLower } from 'compare-semver';
-import { OS, BROWSER, DEVICE } from './parse-browsers';
+import { OS, BROWSER, DEVICE, OS_VERSION_MAPPING } from './parse-browsers';
 
 const isUndefined = (v) => 'undefined' === typeof v;
 
-export const TIMEOUT = 300 * 1000;
+export const TIMEOUT = 600 * 1000;
 
-export const name = 'saucelabs';
+export const name = 'browserstack';
 
 
 /**
@@ -23,7 +22,7 @@ export const name = 'saucelabs';
  *
  * @return {Object} testing session object
  */
-export default class SauceLabsProvider /*implements Provider*/ {
+export default class BrowserStackProvider /*implements Provider*/ {
   constructor(userName, accessToken) {
     this._credentials = { userName, accessToken };
   }
@@ -38,25 +37,20 @@ export default class SauceLabsProvider /*implements Provider*/ {
    * @return {Promise<String>} promise of session id
    */
   init(browser) {
-    this._driver = webdriver.remote({
-      hostname: 'ondemand.saucelabs.com',
-      port: 80,
-      user: this._credentials.userName,
-      pwd: this._credentials.accessToken
-    }, 'promise');
+    this._driver = new webdriver.Builder()
+      .usingServer('http://hub.browserstack.com/wd/hub')
+      .withCapabilities({ ...browser,
+        'browserstack.user': this._credentials.userName,
+        'browserstack.key': this._credentials.accessToken,
+        'loggingPrefs': { 'browser': 'ALL' },
+      })
+      .build();
+    this._logger = new webdriver.WebDriver.Logs(this._driver);
 
-    // maybe we can use this to control timeout?
-    // wd.configureHttp({
-    //   timeout: 10000,
-    //   retries: 3,
-    //   retryDelay: 100
-    // });
-    return this._driver.init(this.constructor.parseBrowser(browser))
-      .then(nth(1), (err) => {
-        if(err.message.match(/Browser combination invalid/)) {
+    return this._driver.session_
+      .then(identity, (err) => {
+        if(err.message.match(/(Browser_Version not supported)|(Browser combination invalid)/)) {
           throw new Error('requested browser is not supported');
-        } else if (err.message.match(/The environment you requested was unavailable/)) {
-          throw new Error('requested browser is not available at the moment');
         } else {
           throw err;
         }
@@ -71,7 +65,7 @@ export default class SauceLabsProvider /*implements Provider*/ {
    * @returns {Promise<String[]>} promise of collection of available log types
    */
   getLogTypes() {
-    return this._driver.logTypes();
+    return this._logger.getAvailableLogTypes();
   }
 
   /**
@@ -84,7 +78,7 @@ export default class SauceLabsProvider /*implements Provider*/ {
    * @returns {Promise<String[]>} promise of collection of available log types
    */
   getLogs(type) {
-    return this._driver.log(type);
+    return this._logger.get(type);
   }
 
   /**
@@ -97,7 +91,7 @@ export default class SauceLabsProvider /*implements Provider*/ {
    * @returns {Promise<*>} result of the execution
    */
   execute(code) {
-    return this._driver.execute(code);
+    return this._driver.executeScript(code);
   }
 
   /**
@@ -149,8 +143,8 @@ export default class SauceLabsProvider /*implements Provider*/ {
    * @return {Promise<Number>} number of available concurrent VMs for the account
    */
   static getConcurrencyLimit(userName, accessToken) {
-    const API_ROOT = 'https://saucelabs.com/rest/v1';
-    return request(`${API_ROOT}/users/${userName}/concurrency`, {
+    const API_ROOT = 'https://www.browserstack.com';
+    return request(`${API_ROOT}/automate/plan.json`, {
       auth: {
         user: userName,
         pass: accessToken,
@@ -158,7 +152,7 @@ export default class SauceLabsProvider /*implements Provider*/ {
       }
     }).then((res) => {
       const parsed = JSON.parse(res);
-      return parseInt(parsed.concurrency[userName].remaining.mac, 10);
+      return parseInt(parsed.parallel_sessions_max_allowed, 10);
     });
   }
 
@@ -186,65 +180,76 @@ export default class SauceLabsProvider /*implements Provider*/ {
    */
   static parseBrowser(browser) {
     let appium = false;
-    let appiumLegacy = false;
+    let osName = browser.os;
+    let osVersion = browser.osVersion;
     let deviceName = browser.device;
     let browserName = browser.name;
+
+    if (osName === OS.OSX) {
+      osName = 'MAC';
+      osVersion = invertObj(OS_VERSION_MAPPING[OS.OSX])[osVersion];
+    }
 
     if ((browser.os === OS.IOS) || (browser.os === OS.ANDROID)) {
       appium = true;
     }
 
-    if ((browser.os === OS.ANDROID) && versionIsLower(browser.osVersion, '4.4')) {
-      appiumLegacy = true;
+    if ((browser.os === OS.IOS) && (browser.name === BROWSER.SAFARI_MOBILE)) {
+      browserName = 'iPad';
     }
 
     if (browser.device === DEVICE.IPHONE) {
-      deviceName = 'iPhone Simulator';
+      deviceName = ({
+        '8': 'iPhone 6',
+        '8.3': 'iPhone 6',
+        '7': 'iPhone 5S',
+        '6': 'iPhone 5',
+        '5.1': 'iPhone 4S',
+        '5': 'iPhone 4S'
+      })[browser.osVersion];
     }
 
     if (browser.device === DEVICE.IPAD) {
-      deviceName = 'iPad Simulator';
+      deviceName = ({
+        '8': 'iPad Air',
+        '8.3': 'iPad Air',
+        '7': 'iPad 4th',
+        '6': 'iPad 3rd (6.0)',
+        '5.1': 'iPad 3rd',
+        '5': 'iPad 2 (5.0)'
+      })[browser.osVersion];
     }
 
     if ((browser.os === OS.ANDROID) && isUndefined(browser.device)) {
-      deviceName = 'Android Emulator';
-    }
-
-    if ((browser.os === OS.ANDROID) && !versionIsLower(browser.osVersion, '4.4')) {
-      browserName = 'Browser';
-    }
-
-    if (browser.name === BROWSER.EDGE) {
-      browserName = 'MicrosoftEdge';
+      deviceName = ({
+        '5': 'Google Nexus 5',
+        '4.4': 'Samsung Galaxy S5',
+        '4.3': 'Samsung Galaxy S4',
+        '4.2': 'Google Nexus 4',
+        '4.1': 'Samsung Galaxy S3',
+        '4': 'Google Nexus',
+      })[browser.osVersion];
     }
 
     const config = {
-      browserName,
       name: browser.displayName
     };
 
     if (appium) {
       merge(config, {
-        deviceOrientation: 'portrait',
-        deviceName
+        browserName,
+        device: deviceName,
+        platform: ({
+          [OS.IOS]: 'MAC',
+          [OS.ANDROID]: 'ANDROID'
+        })[browser.os]
       });
-
-      if (appiumLegacy) {
-        merge(config, {
-          platform: 'Linux',
-          version: browser.osVersion
-        });
-      } else {
-        merge(config, {
-          platformName: browser.osName,
-          platformVersion: browser.osVersion,
-          appiumVersion: '1.4.16'
-        });
-      }
     } else {
       merge(config, {
-        version: browser.version,
-        platform: browser.osName + (browser.osVersion ? ` ${browser.osVersion}` : ''),
+        browser: browserName,
+        browser_version: browser.version,
+        os: osName,
+        os_version: osVersion
       });
     }
 
@@ -256,6 +261,6 @@ export default class SauceLabsProvider /*implements Provider*/ {
    * @description maximal time to wait for server response
    */
   static get TIMEOUT() {
-    return 60 * 1000;
+    return 120 * 1000;
   }
 }

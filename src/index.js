@@ -4,17 +4,10 @@ import {
 } from 'ramda';
 
 import { concurrent, andReturn, andThrow, call } from './promises-util';
-import * as SauceLabs from './providers/saucelabs';
-import * as BrowserStack from './providers/browserstack';
+import createConnector from './wd-connector';
 
 const isObject = is(Object);
 const isString = is(String);
-
-
-const providers = {
-  [SauceLabs.name]: SauceLabs,
-  [BrowserStack.name]: BrowserStack
-};
 
 /**
  * @function run
@@ -27,7 +20,7 @@ const providers = {
  *     @property {String} accessToken
  *   @property {Object} browsers - see documentation for input of parse-browsers
  *     function
- *   @property {String} provider - "saucelabs" or "browserstack"
+ *   @property {Provider} provider - any class that implements Provider interface
  *   @property {String} [code] - valid JS code
  *   @property {Boolean} [verbose=false] - if true, prints logs about testing
  *     progress to console
@@ -40,7 +33,7 @@ const providers = {
  *   (objects containing arrays grouped by names)
  */
 export default function run({
-  provider,
+  Provider,
   browsers,
   credentials,
   code = '',
@@ -48,10 +41,6 @@ export default function run({
   verbose = false,
   timeout = 1000
 } = {}) {
-  if (!providers.hasOwnProperty(provider)) {
-    throw new Error(`Provider "${provider}" is not available. Use one of those: ${Object.keys(providers).join(',')}`);
-  }
-
   if(!isString(code)) {
     throw new TypeError('"code" must be a string');
   }
@@ -63,21 +52,18 @@ export default function run({
     throw new TypeError('"credentials" must be an object with not empty fields "userName" and "accessToken"');
   }
 
-  const { createTest, getConcurrencyLimit, parseBrowser } = providers[provider];
+  const connect = createConnector(Provider);
   const { userName, accessToken } = credentials;
 
   // define tests for all the websites in all browsers (from current config file)
   const testingSessions = browsers
   .map((browser) => {
-    const browserConfig = parseBrowser(browser);
     return {
-      test: createTest(browserConfig, userName, accessToken),
-      browser: browserConfig
+      test: connect(browser, userName, accessToken),
+      browserName: browser.displayName
     };
   })
-  .map(({ test, browser }) => {
-    const browserName = browser.displayName;
-
+  .map(({ test, browserName }) => {
     function print(message) {
       return andReturn(() => Promise.resolve(verbose ? console.log(`${browserName} - ${message}`) : 0));
     }
@@ -110,6 +96,9 @@ export default function run({
         andReturn(test.quit()),
         andThrow(test.quit())
       ).catch((err) => {
+        if (verbose) {
+          console.error(err.stack);
+        }
         // suppress any error
         // we don't want to break a chain, but continue tests in other browsers
         return {
@@ -125,14 +114,13 @@ export default function run({
   });
 
   // run all tests with some concurrency
-  return getConcurrencyLimit(userName, accessToken).then((concurrencyLimit) =>
-    concurrent(testingSessions, concurrencyLimit)
-      .then((resultsForAllTests) => {
-        return resultsForAllTests.reduce((map, { browser, results, logs } = {}) => {
-          map[browser] = { results, logs };
+  return Provider.getConcurrencyLimit(userName, accessToken)
+    .then((concurrencyLimit) => concurrent(testingSessions, concurrencyLimit))
+    .then((resultsForAllTests) => {
+      return resultsForAllTests.reduce((map, { browser, results, logs } = {}) => {
+        map[browser] = { results, logs };
 
-          return map;
-        }, {});
-      })
-    );
+        return map;
+      }, {});
+    });
 }

@@ -1,4 +1,4 @@
-/* global suite, test, setup, teardown */
+/* global suite, test */
 import {
   find,
   propEq
@@ -11,8 +11,7 @@ chai.use(chaiSpies);
 chai.use(chaiSpiesTdd);
 
 import {
-  default as parseBrowsers,
-  __RewireAPI__ as RewireAPI
+  default as parseBrowsers
 } from '../index';
 
 suite('parse-browsers', () => {
@@ -217,7 +216,7 @@ suite('parse-browsers', () => {
       version: '20',
       os: 'windows',
       osVersion: '10'
-    };
+    };/* TODO: add tests for those
     const ANDROID = {
       displayName: 'Android Browser 5',
       version: '5.0',
@@ -231,8 +230,9 @@ suite('parse-browsers', () => {
       os: 'ios',
       osVersion: '9.2',
       device: 'iphone simulator'
-    };
+    };*/
 
+    /* eslint-disable max-nested-callbacks */
     test('Chrome aliases', () => {
       const result = parseBrowsers({
         [`${CHROME.displayName} 1`]: { ...CHROME, name: 'Google Chrome' },
@@ -279,5 +279,6 @@ suite('parse-browsers', () => {
         assert.deepEqual(r.name, 'edge');
       });
     });
+    /* eslint-enable max-nested-callbacks */
   });
 });

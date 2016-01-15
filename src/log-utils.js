@@ -7,7 +7,9 @@ const FIREFOX_ADDON_LOG_PATTERN = /^(\d{13})\t(\S*(?:addons|extensions)\S*)\t([A
 const ANDROID_EMULATOR_LOG_PATTERN = /^\[([0-9\-\A-Z:]+)\](?:\s+\[[A-Z]+\]\s+[A-Z]{1}\/[a-z0-9\/\._]+\s*(?:\[[^\]]+\])?\(\s+\d+\)\:\s+)?(?:\-+\s+beginning\s+of\s+[a-z]+)?(.*)$/i;
 const ANDROID_EMULATOR_BROWSER_MESSAGE_PATTERN = /^\[([0-9\-\A-Z:]+)\]\s+\[[A-Z]+\]\s+I\/chromium\(\s+\d+\)\:\s+\[([A-Z]+)\:CONSOLE\(\d+\)\]\s+\"(.*)",\s+source\:\s+(\S*)\s+\((\d+)\)$/i;
 
-
+// disable until eslint doesnt understand that backticks are allowed (es6 env seems
+// to not work)
+/* eslint-disable quotes */
 const IGNORED_LOGS = [
   // useful hints from Firefox, we don't need them to be printed
   'Using //@ to indicate sourceURL pragmas is deprecated',
@@ -68,6 +70,7 @@ const IGNORED_LOGS = [
   'While creating services from category',
   'unrecognized command line flag'
 ];
+/* eslint-enable quotes */
 
 
 /**
@@ -153,6 +156,8 @@ export function parse(log) {
       message: parsed.message.text
     };
   }
+
+  return log;
 }
 
 

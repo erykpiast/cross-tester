@@ -10,6 +10,8 @@ import {
   DEVICE
 } from './constants';
 
+const UNDEFINED = void 0;
+
 
 /**
  * @function browserVersion
@@ -70,6 +72,8 @@ export function osName(bn) {
   if (bn === BROWSER.SAFARI_MOBILE) {
     return OS.IOS;
   }
+
+  return UNDEFINED;
 }
 
 
@@ -121,4 +125,6 @@ export function deviceName(on, bn) {
   if ((on === OS.ANDROID) && (bn === BROWSER.ANDROID)) {
     return DEVICE.ANDROID_EMULATOR;
   }
+
+  return UNDEFINED;
 }
