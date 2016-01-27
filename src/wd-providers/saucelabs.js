@@ -1,14 +1,26 @@
-import { merge, nth } from 'ramda';
+import {
+  mergeAll,
+  nth,
+  partialRight,
+  useWith
+} from 'ramda';
 import webdriver from 'wd';
 import request from 'request-promise';
-import { lt as versionIsLower } from 'compare-semver';
-import { OS, BROWSER, DEVICE } from './parse-browsers';
+import { lt as semverLt } from 'semver';
+import {
+  OS,
+  BROWSER,
+  DEVICE
+} from '../parse-browsers/constants';
 
 const isUndefined = (v) => 'undefined' === typeof v;
-
-export const TIMEOUT = 300 * 1000;
-
-export const name = 'saucelabs';
+const extendVersion = (v) => {
+  const splitted = v.split('.');
+  return Array.from(new Array(3))
+    .map((v, i) => splitted[i] || '0')
+    .join('.');
+};
+const versionIsLower = useWith(semverLt, [extendVersion, extendVersion]);
 
 
 /**
@@ -159,7 +171,7 @@ export default class SauceLabsProvider /*implements Provider*/ {
     }).then((res) => {
       const parsed = JSON.parse(res);
       return parseInt(parsed.concurrency[userName].remaining.mac, 10);
-    });
+    }, () => 8);
   }
 
 
@@ -185,17 +197,25 @@ export default class SauceLabsProvider /*implements Provider*/ {
    *   @property {String} appiumVersion
    */
   static parseBrowser(browser) {
+    const isVersionHandledByOldAppiumApi = partialRight(versionIsLower, ['4.4']);
     let appium = false;
     let appiumLegacy = false;
     let deviceName = browser.device;
     let browserName = browser.name;
+    let browserVersion = browser.version;
 
     if ((browser.os === OS.IOS) || (browser.os === OS.ANDROID)) {
       appium = true;
     }
 
-    if ((browser.os === OS.ANDROID) && versionIsLower(browser.osVersion, '4.4')) {
+    if ((browser.os === OS.ANDROID) &&
+      isVersionHandledByOldAppiumApi(browser.osVersion)
+    ) {
       appiumLegacy = true;
+    }
+
+    if (browser.name === BROWSER.SAFARI_MOBILE) {
+      browserName = 'safari';
     }
 
     if (browser.device === DEVICE.IPHONE) {
@@ -210,7 +230,9 @@ export default class SauceLabsProvider /*implements Provider*/ {
       deviceName = 'Android Emulator';
     }
 
-    if ((browser.os === OS.ANDROID) && !versionIsLower(browser.osVersion, '4.4')) {
+    if ((browser.os === OS.ANDROID) &&
+      !isVersionHandledByOldAppiumApi(browser.osVersion)
+    ) {
       browserName = 'Browser';
     }
 
@@ -218,34 +240,38 @@ export default class SauceLabsProvider /*implements Provider*/ {
       browserName = 'MicrosoftEdge';
     }
 
-    const config = {
+    // do it like that until only available version on SauceLabs and BrowserStack
+    // is different
+    if ((browser.name === BROWSER.EDGE) && isUndefined(browser.version)) {
+      browserVersion = '20.10240';
+    }
+
+    let config = {
       browserName,
       name: browser.displayName
     };
 
     if (appium) {
-      merge(config, {
+      config = mergeAll([config, {
+        deviceName,
         deviceOrientation: 'portrait',
-        deviceName
-      });
+        deviceType: 'phone',
+        platformName: browser.os,
+        platformVersion: browser.osVersion,
+        appiumVersion: '1.4.16'
+      }]);
 
       if (appiumLegacy) {
-        merge(config, {
-          platform: 'Linux',
-          version: browser.osVersion
-        });
-      } else {
-        merge(config, {
-          platformName: browser.osName,
-          platformVersion: browser.osVersion,
-          appiumVersion: '1.4.16'
-        });
+        config = mergeAll([config, {
+          browserName: '',
+          automationName: 'Selendroid'
+        }]);
       }
     } else {
-      merge(config, {
-        version: browser.version,
-        platform: browser.osName + (browser.osVersion ? ` ${browser.osVersion}` : ''),
-      });
+      config = mergeAll([config, {
+        version: browserVersion,
+        platform: browser.os + (browser.osVersion ? ` ${browser.osVersion}` : ''),
+      }]);
     }
 
     return config;
@@ -256,6 +282,14 @@ export default class SauceLabsProvider /*implements Provider*/ {
    * @description maximal time to wait for server response
    */
   static get TIMEOUT() {
-    return 60 * 1000;
+    return 3 * 60 * 1000;
+  }
+
+  /**
+   * @constant {String} name
+   * @description name of the provider
+   */
+  static get name() {
+    return 'saucelabs';
   }
 }

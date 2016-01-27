@@ -26,7 +26,7 @@ export const mock = function TestProvider() {
   mockMethod(this, 'getResults', instanceReturned);
   mockMethod(this, 'execute', instanceReturned);
   mockMethod(this, 'sleep', instanceReturned);
-  mockMethod(this, 'get', instanceReturned);
+  mockMethod(this, 'open', instanceReturned);
   mockMethod(this, 'quit', instanceReturned);
 };
 mock.getConcurrencyLimit = () => Promise.resolve(1);

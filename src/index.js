@@ -6,6 +6,7 @@ import {
 import { concurrent, andReturn, andThrow, call } from './promises-util';
 import createConnector from './wd-connector';
 
+const isFunction = is(Function);
 const isObject = is(Object);
 const isString = is(String);
 
@@ -41,8 +42,12 @@ export default function run({
   verbose = false,
   timeout = 1000
 } = {}) {
-  if(!isString(code)) {
-    throw new TypeError('"code" must be a string');
+  if(!isFunction(Provider)) {
+    throw new TypeError('"Provider" must be defined');
+  }
+
+  if(!isString(code) && !isString(url)) {
+    throw new TypeError('"code" or "url" must be defined');
   }
 
   if(!isObject(credentials) || isNil(credentials) ||
@@ -87,7 +92,10 @@ export default function run({
             .then(print('logs gathered'))
         ]).then(([results, logs]) => ({
           browser: browserName,
-          results,
+          results: results.map((result) => !result.hasOwnProperty('type') ? ({
+            type: 'SUCCESS',
+            value: result
+          }) : result),
           logs
         }))
       )
@@ -97,7 +105,7 @@ export default function run({
         andThrow(test.quit())
       ).catch((err) => {
         if (verbose) {
-          console.error(err.stack);
+          // console.error(err.stack);
         }
         // suppress any error
         // we don't want to break a chain, but continue tests in other browsers
@@ -105,7 +113,7 @@ export default function run({
           browser: browserName,
           results: [{
             type: 'FAIL',
-            message: err.message
+            value: err.message
           }],
           logs: []
         };

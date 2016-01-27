@@ -1,13 +1,19 @@
-import { merge, identity, invertObj } from 'ramda';
-import webdriver from 'wd';
+import {
+  identity,
+  invertObj,
+  map,
+  mergeAll
+} from 'ramda';
+import webdriver from 'browserstack-webdriver';
 import request from 'request-promise';
-import { OS, BROWSER, DEVICE, OS_VERSION_MAPPING } from './parse-browsers';
+import {
+  OS,
+  BROWSER,
+  DEVICE,
+  OS_VERSION_MAPPING
+} from '../parse-browsers/constants';
 
 const isUndefined = (v) => 'undefined' === typeof v;
-
-export const TIMEOUT = 600 * 1000;
-
-export const name = 'browserstack';
 
 
 /**
@@ -39,7 +45,7 @@ export default class BrowserStackProvider /*implements Provider*/ {
   init(browser) {
     this._driver = new webdriver.Builder()
       .usingServer('http://hub.browserstack.com/wd/hub')
-      .withCapabilities({ ...browser,
+      .withCapabilities({ ...this.constructor.parseBrowser(browser),
         'browserstack.user': this._credentials.userName,
         'browserstack.key': this._credentials.accessToken,
         'loggingPrefs': { 'browser': 'ALL' },
@@ -71,14 +77,17 @@ export default class BrowserStackProvider /*implements Provider*/ {
   /**
    * @method getLogs
    * @access public
-   * @description retrieve available log types in this session
+   * @description retrieve logs of given type
    *
    * @param {String} type
    *
-   * @returns {Promise<String[]>} promise of collection of available log types
+   * @returns {Promise<Log[]>} promise of collection of logs of given type
    */
   getLogs(type) {
-    return this._logger.get(type);
+    return this._logger.get(type).then(map((log) => ({
+      ...log,
+      level: log.level.name
+    })));
   }
 
   /**
@@ -184,9 +193,9 @@ export default class BrowserStackProvider /*implements Provider*/ {
     let osVersion = browser.osVersion;
     let deviceName = browser.device;
     let browserName = browser.name;
+    let browserVersion = browser.version;
 
     if (osName === OS.OSX) {
-      osName = 'MAC';
       osVersion = invertObj(OS_VERSION_MAPPING[OS.OSX])[osVersion];
     }
 
@@ -194,8 +203,13 @@ export default class BrowserStackProvider /*implements Provider*/ {
       appium = true;
     }
 
-    if ((browser.os === OS.IOS) && (browser.name === BROWSER.SAFARI_MOBILE)) {
+    if (browser.name === BROWSER.SAFARI_MOBILE) {
+      osName = 'MAC';
       browserName = 'iPad';
+    }
+
+    if (browser.name === BROWSER.ANDROID) {
+      browserName = 'android';
     }
 
     if (browser.device === DEVICE.IPHONE) {
@@ -231,27 +245,35 @@ export default class BrowserStackProvider /*implements Provider*/ {
       })[browser.osVersion];
     }
 
-    const config = {
+    // do it like that until only available version on SauceLabs and BrowserStack
+    // is different
+    if ((browser.name === BROWSER.EDGE) && isUndefined(browser.version)) {
+      browserVersion = '12';
+    }
+
+    let config = {
       name: browser.displayName
     };
 
     if (appium) {
-      merge(config, {
+      config = mergeAll([config, {
         browserName,
         device: deviceName,
         platform: ({
           [OS.IOS]: 'MAC',
           [OS.ANDROID]: 'ANDROID'
         })[browser.os]
-      });
+      }]);
     } else {
-      merge(config, {
+      config = mergeAll([config, {
         browser: browserName,
-        browser_version: browser.version,
+        browser_version: browserVersion,
         os: osName,
         os_version: osVersion
-      });
+      }]);
     }
+
+    console.log(config);
 
     return config;
   }
@@ -261,6 +283,14 @@ export default class BrowserStackProvider /*implements Provider*/ {
    * @description maximal time to wait for server response
    */
   static get TIMEOUT() {
-    return 120 * 1000;
+    return 10 * 60 * 1000;
+  }
+
+  /**
+   * @constant {String} name
+   * @description name of the provider
+   */
+  static get name() {
+    return 'browserstack';
   }
 }

@@ -1,7 +1,15 @@
-import { is, contains, invertObj } from 'ramda';
+import {
+  any,
+  compose,
+  contains,
+  flip,
+  invertObj,
+  is
+} from 'ramda';
 import { parse as parseUrl } from 'url';
 
-
+const NETWORK_LOG_PATTERN = /^(\S+)(?:\s+)(\d+):(\d+)(.*)$/i;
+const CONSOLE_LOG_PATTERN = /^(?:console-api\s+)(\d+)\:(\d+)(?:\s+)(.*)$/i;
 const CHROME_LOG_PATTERN = /^(javascript|(?:(?:https?|chrome-extension)\:\/\/\S+))\s+(\d+:\d+)\s+(.*)$/i;
 const FIREFOX_ADDON_LOG_PATTERN = /^(\d{13})\t(\S*(?:addons|extensions)\S*)\t([A-Z]+)\t(.*)\n?$/i;
 const ANDROID_EMULATOR_LOG_PATTERN = /^\[([0-9\-\A-Z:]+)\](?:\s+\[[A-Z]+\]\s+[A-Z]{1}\/[a-z0-9\/\._]+\s*(?:\[[^\]]+\])?\(\s+\d+\)\:\s+)?(?:\-+\s+beginning\s+of\s+[a-z]+)?(.*)$/i;
@@ -39,6 +47,9 @@ const IGNORED_LOGS = [
   'Expected media feature name but found',
   'Unrecognized at-rule',
   'Keyframe rule ignored due to bad selector',
+  'Invalid CSS property name',
+  'Invalid CSS property value',
+  'Invalid CSS media query',
   // addons stuff
   'Could not read chrome manifest',
   'blocklist is disabled',
@@ -49,6 +60,7 @@ const IGNORED_LOGS = [
   'Failed to load native module at path',
   'Component returned failure code',
   'While registering XPCOM module',
+  'to preference extensions',
   'addons.xpi:',
   // just useless here
   'server does not support RFC 5746, see CVE-2009-3555',
@@ -68,20 +80,42 @@ const IGNORED_LOGS = [
   'Refused to set unsafe header',
   'The character encoding of a framed document was not declared',
   'While creating services from category',
-  'unrecognized command line flag'
+  'unrecognized command line flag',
+  'OpenGL compositor Initialized Succesfully',
+  // network errors
+  'Failed to load resource'
 ];
 /* eslint-enable quotes */
+
+/**
+ * @function insideIgnoredLogs
+ * @access private
+ * @description checks if passed message contain any message from IGNORED_LOGS
+ *   collection
+ *
+ * @param {String} message
+ *
+ * @return {Boolean}
+ */
+const insideIgnoredLogs = compose(flip(any)(IGNORED_LOGS), flip(contains));
 
 
 /**
  * @type {Object} BrowserLog
  * @property {String} message
- * @property {String} level
+ * @property {String} level - name of log level
  * @property {Number} timestamp
  * @property {Boolean} addon - indicates if log is from browser addon (sadly,
  *   it's not 100% reliable, because it can't be - just an estimation)
  * @property {String} [file] - path to file from which log was made
  * @property {String} [line] - line in file in which log was made
+ */
+
+
+/**
+ * @type {Object} Log
+ * @property {String} message
+ * @property {String} level - name of log level
  */
 
 
@@ -106,7 +140,33 @@ export function parse(log) {
       addon: true,
       timestamp: addonLog[1],
       level: addonLog[3].toUpperCase(),
-      message: `${addonLog[2]}: ${addonLog[4]}`
+      message: `${addonLog[2]}: ${addonLog[4]}`.trim()
+    };
+  }
+
+  // parse some console.logs
+  const consoleLogMessage = log.message.match(CONSOLE_LOG_PATTERN);
+  if(consoleLogMessage) {
+    return {
+      addon: false,
+      timestamp: log.timestamp,
+      level: log.level.toUpperCase(),
+      file: undefined,
+      line: consoleLogMessage[1],
+      message: consoleLogMessage[3].trim()
+    };
+  }
+
+  // parse network logs
+  const networkLogMessage = log.message.match(NETWORK_LOG_PATTERN);
+  if(networkLogMessage) {
+    return {
+      addon: false,
+      timestamp: log.timestamp,
+      level: log.level.toUpperCase(),
+      file: networkLogMessage[1],
+      line: networkLogMessage[2],
+      message: networkLogMessage[4].trim()
     };
   }
 
@@ -119,7 +179,7 @@ export function parse(log) {
       level: log.level.toUpperCase(),
       file: _formatUrl(chromeLogMessage[1]),
       line: chromeLogMessage[2],
-      message: chromeLogMessage[3]
+      message: chromeLogMessage[3].trim()
     };
   }
 
@@ -134,7 +194,7 @@ export function parse(log) {
         level: androidEmulatorBrowserMessage[2],
         file: androidEmulatorBrowserMessage[4] ? _formatUrl(androidEmulatorBrowserMessage[4]) : '',
         line: androidEmulatorBrowserMessage[5],
-        message: androidEmulatorBrowserMessage[3]
+        message: androidEmulatorBrowserMessage[3].trim()
       };
     } else {
       return null;
@@ -153,7 +213,7 @@ export function parse(log) {
       level: parsed.message.level.toUpperCase(),
       file: _formatUrl(parsed.message.url),
       line: `${parsed.message.line}:${parsed.message.column}`,
-      message: parsed.message.text
+      message: parsed.message.text.trim()
     };
   }
 
@@ -171,7 +231,7 @@ export function parse(log) {
  * @returns {Boolean} true if log should be ignored
  */
 export function isIgnored(log) {
-  return log.addon || contains(log.message)(IGNORED_LOGS);
+  return log.addon || insideIgnoredLogs(log.message);
 }
 
 

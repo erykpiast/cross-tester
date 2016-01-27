@@ -1,5 +1,7 @@
 'use strict';
 
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 Object.defineProperty(exports, "__esModule", {
@@ -8,32 +10,25 @@ Object.defineProperty(exports, "__esModule", {
 
 var _ramda = require('ramda');
 
-var _wd = require('wd');
+var _browserstackWebdriver = require('browserstack-webdriver');
 
-var _wd2 = _interopRequireDefault(_wd);
+var _browserstackWebdriver2 = _interopRequireDefault(_browserstackWebdriver);
 
 var _requestPromise = require('request-promise');
 
 var _requestPromise2 = _interopRequireDefault(_requestPromise);
 
-var _semver = require('semver');
-
 var _constants = require('../parse-browsers/constants');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var isUndefined = function isUndefined(v) {
   return 'undefined' === typeof v;
 };
-var extendVersion = function extendVersion(v) {
-  var splitted = v.split('.');
-  return Array.from(new Array(3)).map(function (v, i) {
-    return splitted[i] || '0';
-  }).join('.');
-};
-var versionIsLower = (0, _ramda.useWith)(_semver.lt, [extendVersion, extendVersion]);
 
 /**
  * @function createTest - creates testing session in single browser
@@ -48,9 +43,9 @@ var versionIsLower = (0, _ramda.useWith)(_semver.lt, [extendVersion, extendVersi
  * @return {Object} testing session object
  */
 
-var SauceLabsProvider /*implements Provider*/ = function () {
-  function SauceLabsProvider(userName, accessToken) {
-    _classCallCheck(this, SauceLabsProvider);
+var BrowserStackProvider /*implements Provider*/ = function () {
+  function BrowserStackProvider(userName, accessToken) {
+    _classCallCheck(this, BrowserStackProvider);
 
     this._credentials = { userName: userName, accessToken: accessToken };
   }
@@ -65,27 +60,19 @@ var SauceLabsProvider /*implements Provider*/ = function () {
    * @return {Promise<String>} promise of session id
    */
 
-  _createClass(SauceLabsProvider, [{
+  _createClass(BrowserStackProvider, [{
     key: 'init',
     value: function init(browser) {
-      this._driver = _wd2.default.remote({
-        hostname: 'ondemand.saucelabs.com',
-        port: 80,
-        user: this._credentials.userName,
-        pwd: this._credentials.accessToken
-      }, 'promise');
+      this._driver = new _browserstackWebdriver2.default.Builder().usingServer('http://hub.browserstack.com/wd/hub').withCapabilities(_extends({}, this.constructor.parseBrowser(browser), {
+        'browserstack.user': this._credentials.userName,
+        'browserstack.key': this._credentials.accessToken,
+        'loggingPrefs': { 'browser': 'ALL' }
+      })).build();
+      this._logger = new _browserstackWebdriver2.default.WebDriver.Logs(this._driver);
 
-      // maybe we can use this to control timeout?
-      // wd.configureHttp({
-      //   timeout: 10000,
-      //   retries: 3,
-      //   retryDelay: 100
-      // });
-      return this._driver.init(this.constructor.parseBrowser(browser)).then((0, _ramda.nth)(1), function (err) {
-        if (err.message.match(/Browser combination invalid/)) {
+      return this._driver.session_.then(_ramda.identity, function (err) {
+        if (err.message.match(/(Browser_Version not supported)|(Browser combination invalid)/)) {
           throw new Error('requested browser is not supported');
-        } else if (err.message.match(/The environment you requested was unavailable/)) {
-          throw new Error('requested browser is not available at the moment');
         } else {
           throw err;
         }
@@ -103,23 +90,27 @@ var SauceLabsProvider /*implements Provider*/ = function () {
   }, {
     key: 'getLogTypes',
     value: function getLogTypes() {
-      return this._driver.logTypes();
+      return this._logger.getAvailableLogTypes();
     }
 
     /**
      * @method getLogs
      * @access public
-     * @description retrieve available log types in this session
+     * @description retrieve logs of given type
      *
      * @param {String} type
      *
-     * @returns {Promise<String[]>} promise of collection of available log types
+     * @returns {Promise<Log[]>} promise of collection of logs of given type
      */
 
   }, {
     key: 'getLogs',
     value: function getLogs(type) {
-      return this._driver.log(type);
+      return this._logger.get(type).then((0, _ramda.map)(function (log) {
+        return _extends({}, log, {
+          level: log.level.name
+        });
+      }));
     }
 
     /**
@@ -135,7 +126,7 @@ var SauceLabsProvider /*implements Provider*/ = function () {
   }, {
     key: 'execute',
     value: function execute(code) {
-      return this._driver.execute(code);
+      return this._driver.executeScript(code);
     }
 
     /**
@@ -198,8 +189,8 @@ var SauceLabsProvider /*implements Provider*/ = function () {
   }], [{
     key: 'getConcurrencyLimit',
     value: function getConcurrencyLimit(userName, accessToken) {
-      var API_ROOT = 'https://saucelabs.com/rest/v1';
-      return (0, _requestPromise2.default)(API_ROOT + '/users/' + userName + '/concurrency', {
+      var API_ROOT = 'https://www.browserstack.com';
+      return (0, _requestPromise2.default)(API_ROOT + '/automate/plan.json', {
         auth: {
           user: userName,
           pass: accessToken,
@@ -207,9 +198,7 @@ var SauceLabsProvider /*implements Provider*/ = function () {
         }
       }).then(function (res) {
         var parsed = JSON.parse(res);
-        return parseInt(parsed.concurrency[userName].remaining.mac, 10);
-      }, function () {
-        return 8;
+        return parseInt(parsed.parallel_sessions_max_allowed, 10);
       });
     }
 
@@ -238,78 +227,91 @@ var SauceLabsProvider /*implements Provider*/ = function () {
   }, {
     key: 'parseBrowser',
     value: function parseBrowser(browser) {
-      var isVersionHandledByOldAppiumApi = (0, _ramda.partialRight)(versionIsLower, ['4.4']);
       var appium = false;
-      var appiumLegacy = false;
+      var osName = browser.os;
+      var osVersion = browser.osVersion;
       var deviceName = browser.device;
       var browserName = browser.name;
       var browserVersion = browser.version;
+
+      if (osName === _constants.OS.OSX) {
+        osVersion = (0, _ramda.invertObj)(_constants.OS_VERSION_MAPPING[_constants.OS.OSX])[osVersion];
+      }
 
       if (browser.os === _constants.OS.IOS || browser.os === _constants.OS.ANDROID) {
         appium = true;
       }
 
-      if (browser.os === _constants.OS.ANDROID && isVersionHandledByOldAppiumApi(browser.osVersion)) {
-        appiumLegacy = true;
+      if (browser.name === _constants.BROWSER.SAFARI_MOBILE) {
+        osName = 'MAC';
+        browserName = 'iPad';
       }
 
-      if (browser.name === _constants.BROWSER.SAFARI_MOBILE) {
-        browserName = 'safari';
+      if (browser.name === _constants.BROWSER.ANDROID) {
+        browserName = 'android';
       }
 
       if (browser.device === _constants.DEVICE.IPHONE) {
-        deviceName = 'iPhone Simulator';
+        deviceName = {
+          '8': 'iPhone 6',
+          '8.3': 'iPhone 6',
+          '7': 'iPhone 5S',
+          '6': 'iPhone 5',
+          '5.1': 'iPhone 4S',
+          '5': 'iPhone 4S'
+        }[browser.osVersion];
       }
 
       if (browser.device === _constants.DEVICE.IPAD) {
-        deviceName = 'iPad Simulator';
+        deviceName = {
+          '8': 'iPad Air',
+          '8.3': 'iPad Air',
+          '7': 'iPad 4th',
+          '6': 'iPad 3rd (6.0)',
+          '5.1': 'iPad 3rd',
+          '5': 'iPad 2 (5.0)'
+        }[browser.osVersion];
       }
 
       if (browser.os === _constants.OS.ANDROID && isUndefined(browser.device)) {
-        deviceName = 'Android Emulator';
-      }
-
-      if (browser.os === _constants.OS.ANDROID && !isVersionHandledByOldAppiumApi(browser.osVersion)) {
-        browserName = 'Browser';
-      }
-
-      if (browser.name === _constants.BROWSER.EDGE) {
-        browserName = 'MicrosoftEdge';
+        deviceName = {
+          '5': 'Google Nexus 5',
+          '4.4': 'Samsung Galaxy S5',
+          '4.3': 'Samsung Galaxy S4',
+          '4.2': 'Google Nexus 4',
+          '4.1': 'Samsung Galaxy S3',
+          '4': 'Google Nexus'
+        }[browser.osVersion];
       }
 
       // do it like that until only available version on SauceLabs and BrowserStack
       // is different
       if (browser.name === _constants.BROWSER.EDGE && isUndefined(browser.version)) {
-        browserVersion = '20.10240';
+        browserVersion = '12';
       }
 
       var config = {
-        browserName: browserName,
         name: browser.displayName
       };
 
       if (appium) {
-        config = (0, _ramda.mergeAll)([config, {
-          deviceName: deviceName,
-          deviceOrientation: 'portrait',
-          deviceType: 'phone',
-          platformName: browser.os,
-          platformVersion: browser.osVersion,
-          appiumVersion: '1.4.16'
-        }]);
+        var _OS$IOS$OS$ANDROID$br;
 
-        if (appiumLegacy) {
-          config = (0, _ramda.mergeAll)([config, {
-            browserName: '',
-            automationName: 'Selendroid'
-          }]);
-        }
+        config = (0, _ramda.mergeAll)([config, {
+          browserName: browserName,
+          device: deviceName,
+          platform: (_OS$IOS$OS$ANDROID$br = {}, _defineProperty(_OS$IOS$OS$ANDROID$br, _constants.OS.IOS, 'MAC'), _defineProperty(_OS$IOS$OS$ANDROID$br, _constants.OS.ANDROID, 'ANDROID'), _OS$IOS$OS$ANDROID$br)[browser.os]
+        }]);
       } else {
         config = (0, _ramda.mergeAll)([config, {
-          version: browserVersion,
-          platform: browser.os + (browser.osVersion ? ' ' + browser.osVersion : '')
+          browser: browserName,
+          browser_version: browserVersion,
+          os: osName,
+          os_version: osVersion
         }]);
       }
+
+      console.log(config);
 
       return config;
     }
@@ -322,7 +324,7 @@ var SauceLabsProvider /*implements Provider*/ = function () {
   }, {
     key: 'TIMEOUT',
     get: function get() {
-      return 3 * 60 * 1000;
+      return 10 * 60 * 1000;
     }
 
     /**
@@ -333,11 +335,11 @@ var SauceLabsProvider /*implements Provider*/ = function () {
   }, {
     key: 'name',
     get: function get() {
-      return 'saucelabs';
+      return 'browserstack';
     }
   }]);
 
-  return SauceLabsProvider;
+  return BrowserStackProvider;
 }();
 
-exports.default = SauceLabsProvider;
+exports.default = BrowserStackProvider;

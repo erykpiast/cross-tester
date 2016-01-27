@@ -1,4 +1,12 @@
-import { identity, contains } from 'ramda';
+import {
+  contains,
+  gt,
+  identity,
+  map,
+  pipe,
+  propOr,
+  reject
+} from 'ramda';
 import Promise from 'bluebird';
 
 import {
@@ -124,8 +132,8 @@ export default function createConnector(Provider) {
             Promise.delay(Provider.TIMEOUT).then(() => {
               throw new Error(`cannot open page ${url} in ${Provider.TIMEOUT} ms`);
             }),
-            this._driver.get(url)
-              .then(this._driver.execute(`
+            this._driver.open(url)
+              .then(() => this._driver.execute(`
                 ${RESULTS_ARRAY_NAME} = ${RESULTS_ARRAY_NAME} || [];
                 window.__saveResult = window.__saveResult || function(result) {
                   ${RESULTS_ARRAY_NAME}.push(result);
@@ -140,13 +148,17 @@ export default function createConnector(Provider) {
        * @description fetch browser logs with level equal or higher to provided
        *   one
        *
-       * @param {String} [levelName='ERROR']
+       * @param {String} [levelName='INFO']
        *
        * @returns {Function}
        *   @returns {Promise<BrowserLog[]>}
        */
-      getBrowserLogs(levelName = 'ERROR') {
+      getBrowserLogs(levelName = 'INFO') {
         const level = logLevelByName[levelName] || logLevelByName.ERROR;
+        const isLogLevelLowerThanRequired = pipe(
+          propOr(Infinity, 'level'),
+          gt(level)
+        );
 
         return () => this._driver.getLogTypes().then(
           (types = []) =>
@@ -163,18 +175,16 @@ export default function createConnector(Provider) {
 
           return notGot;
         })
-        .then((logs) =>
-        // parse Firefox logs from addons and Chrome logs
-          logs
-            .map(parseLog)
-            .filter(isLogIgnored)
-            .filter((log) =>
-              (logLevelByName[log.level] || Infinity) >= level
-            )
+        .then(
+          pipe(
+            map(parseLog),
+            reject(isLogIgnored),
+            reject(isLogLevelLowerThanRequired)
+          )
         )
-        .then((logs) => {
-          this._browserLogs = logs;
-        });
+        .then((logs) =>
+          this._browserLogs = logs
+        );
       },
 
       /**
