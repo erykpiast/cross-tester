@@ -273,8 +273,6 @@ export default class BrowserStackProvider /*implements Provider*/ {
       }]);
     }
 
-    console.log(config);
-
     return config;
   }
 

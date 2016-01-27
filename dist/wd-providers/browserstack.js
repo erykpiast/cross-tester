@@ -311,8 +311,6 @@ var BrowserStackProvider /*implements Provider*/ = function () {
         }]);
       }
 
-      console.log(config);
-
       return config;
     }
 
