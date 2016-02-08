@@ -18,46 +18,57 @@ runCode({
   code: 'window.__results__.push(666)', // push anything to global __results__
   // array if you want to see it in results; you don't have to provide a code
   url: 'http://output.jsbin.com/kovanuyiqu', // URL to website with code is OK too
+  timeout: 2000 // specify, how long to wait for results (1000 ms is defualt)
   credentials: {
     userName: 'myUserName',
     accessToken: 'myAccessToken'
   },
-  browsers: {
-    'Google Chrome': { // just a display name
-      name: 'Chrome', // actual browser name
-      versions: {
-        'latest': '46', // key is a display name, value - actual version number
-        'previous': '38'
-      },
-      platform: 'Windows',
-      osVersion: '10' // optional, can be guessed in most cases
-    },
-    'iOS Safari': {
-      name: 'Safari',
-      versions: {
-        'latest iPhone': {
-          osVersion: '9.2',
-          deviceName: 'iPhone',
-          devices: ['6', '6 Plus', '5S'] // second part of device name, all of those
-          // will be combined with the first one, creating 3 testing configurations
-        },
-        'previous iPad': {
-          osVersion: '8.4',
-          deviceName: 'iPad' // if you don't care about specific models, provide
-          // just a device name
-        }
-      },
-      platform: 'iOS'
-    },
-    'Android Browser': {
-      name: 'Android Browser',
-      versions: {
-        'Lollipop': '5.0',
-        'KitKat': 'KitKat' // you can use codenames for Android and OS X; in case
-        // of the first one, the newest version is used (ex. Jelly Bean => 4.3)
-      }
-    }
-  }
+  browsers: [{
+    displayName: 'Google Chrome on Mac',
+    name: 'chrome',
+    version: '46',
+    os: 'os x',
+    osVersion: '10.10'
+  }, {
+    displayName: 'Mozilla Firefox on Mac',
+    name: 'firefox',
+    version: '42',
+    os: 'os x',
+    osVersion: '10.10'
+  }, {
+    displayName: 'Safari Desktop',
+    name: 'safari',
+    version: '9',
+    os: 'os x',
+    osVersion: '10.11'
+  }, {
+    displayName: 'Internet Explorer',
+    name: 'internet explorer',
+    version: '11',
+    os: 'windows',
+    osVersion: '8.1'
+  }, {
+    displayName: 'MS Edge',
+    name: 'edge',
+    // take the only available version in SL and BS; it's behavior specific for
+    // Microsoft Edge
+    version: undefined,
+    os: 'windows',
+    osVersion: '10'
+  }, {
+    displayName: 'Android Browser',
+    name: 'android browser',
+    version: '5.0',
+    os: 'android',
+    osVersion: '5'
+  }, {
+    displayName: 'iPhone Safari',
+    name: 'safari mobile',
+    version: '9.0',
+    os: 'ios',
+    osVersion: '9.0',
+    device: 'iphone'
+  }]
 }).then(
   (results) => console.log(results),
   // promise will be rejected only when error inside the tester occured, it's
@@ -72,9 +83,9 @@ in your path after installing the package globally (or inside `./node_modules/.b
 directory in case of local installation). Provide a name of Selenium/Appium grid
 service of your choice with `-p` parameter, user and access token with
 `-u` and `-a` (those three are only required parameters), code with `-c` (or URL
-with `-s`) and list of browsers with `-b` (the last one has to be valid JSON
-object, so I recommend to simply edit executable file). Full-featured CLI
-program is coming!
+with `-s`) and json file containing list of browsers with `-b` (the last one has
+to be valid JSON object, so I recommend to simply edit executable file). Full
+featured CLI program is coming!
 
 ## Notes
 Some mobile browsers on BrowserStack doesn't work really well. It seems like

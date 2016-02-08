@@ -1,6 +1,5 @@
 import chai from 'chai';
 import chaiSpies from 'chai-spies';
-import {last} from 'lodash';
 
 chai.use(chaiSpies);
 
@@ -14,50 +13,66 @@ export function resetInstances() {
   instances = [];
 }
 
-export const mock = chai.spy(function createTest(browser) {
+export const mock = function TestProvider() {
   const instanceReturned = [];
   returned.push(instanceReturned);
-  const exports = {};
+  instances.push(this);
+  this.browserName = arguments[arguments.length - 1];
 
-  mockMethod(exports, 'enter', instanceReturned);
-  mockMethod(exports, 'getBrowserLogs', instanceReturned);
-  mockMethod(exports, 'getResults', instanceReturned);
-  mockMethod(exports, 'execute', instanceReturned);
-  mockMethod(exports, 'sleep', instanceReturned);
-  mockMethod(exports, 'open', instanceReturned);
-  mockMethod(exports, 'quit', instanceReturned);
+  mockMethod(this, 'init', instanceReturned);
+  mockMethod(this, 'enter', instanceReturned);
+  mockMethod(this, 'getLogTypes', instanceReturned);
+  mockMethod(this, 'getBrowserLogs', instanceReturned);
+  mockMethod(this, 'getResults', instanceReturned);
+  mockMethod(this, 'execute', instanceReturned);
+  mockMethod(this, 'sleep', instanceReturned);
+  mockMethod(this, 'open', instanceReturned);
+  mockMethod(this, 'quit', instanceReturned);
+};
+mock.getConcurrencyLimit = () => Promise.resolve(1);
+mock.TIMEOUT = 10000;
 
-  exports.__browserName = browser.name;
-
-  instances.push(exports);
-
-  return exports;
-});
-
-
-function mockMethod(exports, name, returned) {
+// for debugging purposes
+const logFromMock = false;
+function mockMethod(object, name, returned) {
   const index = returned[name] = returned.hasOwnProperty(name) ? returned[name] + 1 : 0;
-  exports[name] = chai.spy(() => {
-    // console.log(`method ${name} called`);
-    const returnedValue = chai.spy(() => {
-      // console.log(`function returned by ${name} called`);
-      return new Promise((resolve, reject) => {
-        returned.push({
-          resolve,
-          reject,
-          name,
-          index
-        });
-      });
-    });
+  object[name] = chai.spy(() => {
+    if (logFromMock) {
+      console.log(`${object.browserName}: method ${name} called`);
+    }
 
-    exports[name].returned.push(returnedValue);
+    const returnedValue = new Promise((resolve, reject) => {
+      returned.push({
+        resolve,
+        reject,
+        name,
+        index,
+        browserName: object.browserName
+      });
+    }).then(
+      (v) => {
+        if (logFromMock) {
+          console.log(`${object.browserName}: promise returned by ${name} resolved!`);
+        }
+
+        return v;
+      },
+      (e) => {
+        if (logFromMock) {
+          console.log(`${object.browserName}: promise returned by ${name} rejected!`);
+        }
+
+        throw e;
+      }
+    );
+
+    object[name].returned.push(returnedValue);
 
     return returnedValue;
   });
 
   // save values returned by each call of the method
-  exports[name].returned = [];
+  object[name].returned = [];
 }
 
 
@@ -80,21 +95,18 @@ function mockMethod(exports, name, returned) {
  * @return {Function} stops waiting for new promises when called
  */
 function fulfillReturnedPromises(iterator) {
-  const timeouts = [];
-  const timeout = setTimeout(() => {
+  let timeout;
+  (function tryToResolve() {
     returned.forEach(function iterate(instance, instanceIndex) {
-      instance.forEach((call) => iterator(call, call.index, instanceIndex));
-      instance.splice(0, instance.length);
-
-      // try to resolve next Promise in the chain
-      const timeout = setTimeout(iterate, 0, instance, instanceIndex);
-      timeouts.push(timeout);
+      instance
+        .splice(0, instance.length)
+        .forEach((call) => iterator(call, call.index, instanceIndex));
     });
-  }, 0);
-  timeouts.push(timeout);
+    timeout = setTimeout(tryToResolve, 0);
+  })();
 
   return function stopWaiting() {
-    timeouts.forEach(clearTimeout);
+    clearTimeout(timeout);
   };
 }
 
@@ -119,13 +131,14 @@ export function makeItAllRight() {
  * @param {Number} _callIndex_ - index of method call
  */
 export function throwOn(_name_, _instanceIndex_ = 0, _callIndex_ = 0) {
-  fulfillReturnedPromises(({ resolve, reject, name }, callIndex, instanceIndex) => {
+  const stopMaking = fulfillReturnedPromises(({ resolve, reject, name }, callIndex, instanceIndex) => {
     if ((name === _name_) &&
       ('function' === typeof _instanceIndex_ ?
         _instanceIndex_(instances[instanceIndex].__browserName) :
         _instanceIndex_ === instanceIndex) &&
       (_callIndex_ === callIndex)
     ) {
+      stopMaking();
       reject(new Error('fake error'));
     } else {
       resolve();

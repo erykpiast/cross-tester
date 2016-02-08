@@ -1,5 +1,5 @@
 /* global suite, test, setup, teardown */
-import { assign } from 'lodash';
+import { merge, mergeAll } from 'ramda';
 import { default as chai, assert } from 'chai';
 import chaiSpies from 'chai-spies';
 import chaiSpiesTdd from 'chai-spies-tdd';
@@ -8,40 +8,32 @@ chai.use(chaiSpies);
 chai.use(chaiSpiesTdd);
 
 import {
-  instances as createdTests,
-  resetInstances as resetCreatedTests,
+  instances as providerInstances,
+  resetInstances as resetProviderInstances,
   resetReturned as resetReturnedFromMock,
-  mock as createTestMock,
+  mock as TestProvider,
   makeItAllRight,
   throwOn
-} from './create-test.mock';
+} from './provider.mock';
 import testBrowsers from './browsers.fixture';
 
 import { default as run, __RewireAPI__ as RewireAPI } from '../src/index';
 
-RewireAPI.__Rewire__('providers', {
-  test: {
-    getConcurrencyLimit: () => Promise.resolve(1),
-    parseBrowser: (browser, browserName) => assign({ displayName: browserName }, browser),
-    createTest: createTestMock
-  }
-});
-RewireAPI.__Rewire__('parseBrowsers', (browsers) => browsers);
-
 
 const VALID_CONFIG = {
-  provider: 'test',
+  Provider: TestProvider,
   browsers: testBrowsers,
   code: 'var abc = 1234;',
   credentials: {
     userName: 'abc',
     accessToken: '1234'
-  }
+  },
+  verbose: false
 };
 
 
 function overwrite(base, src) {
-  return assign({}, base, src);
+  return mergeAll([{}, base, src]);
 }
 
 suite('API', () => {
@@ -57,28 +49,6 @@ suite('API', () => {
     // minimal set of ES6 promise methods
     assert.isFunction(returned.then, 'is a promise');
     assert.isFunction(returned.catch, 'is a promise');
-  });
-
-  test('provider parameter checking', () => {
-    const ERR_PATTERN = /is not available/;
-
-    assert.throws(() => {
-      run(overwrite(VALID_CONFIG, {
-        provider: 'unknown'
-      }));
-    }, ERR_PATTERN);
-
-    assert.throws(() => {
-      run(overwrite(VALID_CONFIG, {
-        provider: null
-      }));
-    }, ERR_PATTERN, 'throws if provider is not available');
-
-    assert.throws(() => {
-      run(overwrite(VALID_CONFIG, {
-        provider: undefined
-      }));
-    }, ERR_PATTERN);
   });
 
   test('code parameter checking', () => {
@@ -135,14 +105,18 @@ suite('API', () => {
 
 suite('creating test sessions', () => {
   setup(() => {
-    createTestMock.reset();
     resetReturnedFromMock();
-    resetCreatedTests();
+    resetProviderInstances();
   });
 
-  test('creating sessions', () => {
-    run(VALID_CONFIG);
-    assert.calledExactly(createTestMock, 3, 'one test session per browser');
+  test('creating sessions', (done) => {
+    run(VALID_CONFIG).then(() => {
+      assert.lengthOf(providerInstances, 3, 'one test session per browser');
+      done();
+      stopMaking();
+    }, done);
+
+    var stopMaking = makeItAllRight();
   });
 
   test(`resolving returned promise`, (done) => {
@@ -154,12 +128,13 @@ suite('creating test sessions', () => {
         'iPhone 8.1'
       ], `results named like browsers`);
       done();
+      stopMaking();
     });
 
-    makeItAllRight();
+    var stopMaking = makeItAllRight();
   });
 
-  test(`resolving returned promise`, (done) => {
+  test(`not resolving returned promise`, (done) => {
     let resolved;
     run(VALID_CONFIG).then(() => {
       resolved = true;
@@ -174,9 +149,8 @@ suite('creating test sessions', () => {
 
 suite('error handling', () => {
   setup(() => {
-    createTestMock.reset();
     resetReturnedFromMock();
-    resetCreatedTests();
+    resetProviderInstances();
   });
 
   test('continuing tests when error occurs', (done) => {
@@ -195,17 +169,11 @@ suite('error handling', () => {
 
   test('calling quit when error occurs', (done) => {
     run(VALID_CONFIG).then(() => {
-      createdTests.forEach(({ quit }) => {
-        // why check it like that? quit method is called twice (once for
-        // success, once for failure path) and we wish to know if any function
-        // returned by one of those calls was called (no matter which one)
-        const callsCount = quit.returned
-          .map((returnedByQuit) => returnedByQuit.__spy.calls.length)
-          .reduce((acc, value) => acc + value, 0);
-        assert.equal(callsCount, 1, 'function returned by quit method was called once');
+      providerInstances.forEach(({ quit }) => {
+        assert.calledOnce(quit, 'function returned by quit method was called once');
       });
       done();
-    }, console.log.bind(console, 'ERR!'));
+    });
 
     throwOn('execute');
   });
