@@ -83,9 +83,8 @@ in your path after installing the package globally (or inside `./node_modules/.b
 directory in case of local installation). Provide a name of Selenium/Appium grid
 service of your choice with `-p` parameter, user and access token with
 `-u` and `-a` (those three are only required parameters), code with `-c` (or URL
-with `-s`) and json file containing list of browsers with `-b` (the last one has
-to be valid JSON object, so I recommend to simply edit executable file). Full
-featured CLI program is coming!
+with `-s`) and JSON file containing list of browsers with `-b`. Full featured
+CLI program is coming!
 
 ## Notes
 Some mobile browsers on BrowserStack doesn't work really well. It seems like
