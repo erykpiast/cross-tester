@@ -1,6 +1,6 @@
 {
   "name": "cross-tester",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Utility for automated cross-browser testing with SauceLabs and BrowserStack",
   "main": "dist/index.js",
   "bin": "dist/test.js",
