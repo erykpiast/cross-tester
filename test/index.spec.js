@@ -51,14 +51,29 @@ suite('API', () => {
     assert.isFunction(returned.catch, 'is a promise');
   });
 
-  test('code parameter checking', () => {
-    const ERR_PATTERN = /must be a string/;
+  test('code and url parameters checking', () => {
+    const ERR_PATTERN = /must be defined/;
 
     assert.throws(() => {
       run(overwrite(VALID_CONFIG, {
+        url: null,
         code: null
       }));
-    }, ERR_PATTERN, 'throws if code is not a string');
+    }, ERR_PATTERN, 'throws if code is not valid and URL is not provided');
+
+    assert.doesNotThrow(() => {
+      run(overwrite(VALID_CONFIG, {
+        url: '',
+        code: null
+      }));
+    }, 'does not throw if code is not valid but URL provided');
+
+    assert.doesNotThrow(() => {
+      run(overwrite(VALID_CONFIG, {
+        code: '',
+        url: null
+      }));
+    }, 'does not throw if URL is not valid but code provided');
   });
 
   test('credentials parameter checking', () => {
