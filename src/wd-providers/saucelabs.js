@@ -197,47 +197,41 @@ export default class SauceLabsProvider /*implements Provider*/ {
    *   @property {String} appiumVersion
    */
   static parseBrowser(browser) {
-    const isVersionHandledByOldAppiumApi = partialRight(versionIsLower, ['4.4']);
-    let appium = false;
-    let appiumLegacy = false;
+    let platform = browser.os + (browser.osVersion ? ` ${browser.osVersion}` : '');
     let deviceName = browser.device;
     let browserName = browser.name;
     let browserVersion = browser.version;
 
-    if ((browser.os === OS.IOS) || (browser.os === OS.ANDROID)) {
-      appium = true;
-    }
-
-    if ((browser.os === OS.ANDROID) &&
-      isVersionHandledByOldAppiumApi(browser.osVersion)
-    ) {
-      appiumLegacy = true;
-    }
-
     if (browser.name === BROWSER.SAFARI_MOBILE) {
-      browserName = 'safari';
+      browserName = 'iphone';
+    }
+
+    if (browser.name === BROWSER.ANDROID) {
+      browserName = 'android';
     }
 
     if (browser.device === DEVICE.IPHONE) {
-      deviceName = 'iPhone Simulator';
+      deviceName = 'iphone simulator';
     }
 
     if (browser.device === DEVICE.IPAD) {
-      deviceName = 'iPad Simulator';
+      deviceName = 'ipad simulator';
+    }
+
+    if (browser.os === OS.IOS) {
+      platform = 'os x 10.10';
+    }
+
+    if (browser.os === OS.ANDROID) {
+      platform = 'linux';
     }
 
     if ((browser.os === OS.ANDROID) && isUndefined(browser.device)) {
-      deviceName = 'Android Emulator';
-    }
-
-    if ((browser.os === OS.ANDROID) &&
-      !isVersionHandledByOldAppiumApi(browser.osVersion)
-    ) {
-      browserName = 'Browser';
+      deviceName = 'android emulator';
     }
 
     if (browser.name === BROWSER.EDGE) {
-      browserName = 'MicrosoftEdge';
+      browserName = 'microsoftedge';
     }
 
     // do it like that until only available version on SauceLabs and BrowserStack
@@ -246,32 +240,19 @@ export default class SauceLabsProvider /*implements Provider*/ {
       browserVersion = '20.10240';
     }
 
-    let config = {
+    const config = {
+      name: browser.displayName,
       browserName,
-      name: browser.displayName
+      version: browserVersion,
+      platform
     };
 
-    if (appium) {
-      config = mergeAll([config, {
+    if (!isUndefined(deviceName)) {
+      return {
+        ...config,
         deviceName,
-        deviceOrientation: 'portrait',
-        deviceType: 'phone',
-        platformName: browser.os,
-        platformVersion: browser.osVersion,
-        appiumVersion: '1.4.16'
-      }]);
-
-      if (appiumLegacy) {
-        config = mergeAll([config, {
-          browserName: '',
-          automationName: 'Selendroid'
-        }]);
-      }
-    } else {
-      config = mergeAll([config, {
-        version: browserVersion,
-        platform: browser.os + (browser.osVersion ? ` ${browser.osVersion}` : ''),
-      }]);
+        deviceOrientation: 'portrait'
+      };
     }
 
     return config;

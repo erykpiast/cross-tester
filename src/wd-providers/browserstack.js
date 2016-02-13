@@ -1,4 +1,5 @@
 import {
+  contains,
   identity,
   invertObj,
   map,
@@ -204,76 +205,87 @@ export default class BrowserStackProvider /*implements Provider*/ {
     }
 
     if (browser.name === BROWSER.SAFARI_MOBILE) {
-      osName = 'MAC';
-      browserName = 'iPad';
+      osName = 'os x';
+
+      if (!isUndefined(browser.device) && contains(DEVICE.IPAD, browser.device)) {
+        browserName = 'ipad';
+      } else {
+        browserName = 'iphone';
+      }
     }
 
     if (browser.name === BROWSER.ANDROID) {
       browserName = 'android';
     }
 
-    if (browser.device === DEVICE.IPHONE) {
+    if (browser.name === BROWSER.IE) {
+      browserName = 'ie';
+    }
+
+    if (browser.device === DEVICE.IPHONE || isUndefined(browser.device)) {
       deviceName = ({
-        '8': 'iPhone 6',
-        '8.3': 'iPhone 6',
-        '7': 'iPhone 5S',
-        '6': 'iPhone 5',
-        '5.1': 'iPhone 4S',
-        '5': 'iPhone 4S'
+        '9.1': 'iphone 6s',
+        '8': 'iphone 6',
+        '8.3': 'iphone 6',
+        '7': 'iphone 5s',
+        '6': 'iphone 5',
+        '5.1': 'iphone 4s',
+        '5': 'iphone 4s'
       })[browser.osVersion];
     }
 
     if (browser.device === DEVICE.IPAD) {
       deviceName = ({
-        '8': 'iPad Air',
-        '8.3': 'iPad Air',
-        '7': 'iPad 4th',
-        '6': 'iPad 3rd (6.0)',
-        '5.1': 'iPad 3rd',
-        '5': 'iPad 2 (5.0)'
+        '9.1': 'ipad air 2',
+        '8.3': 'ipad air',
+        '8': 'ipad air',
+        '7': 'ipad 4th',
+        '6': 'ipad 3rd (6.0)',
+        '5.1': 'ipad 3rd',
+        '5': 'ipad 2 (5.0)'
       })[browser.osVersion];
     }
 
     if ((browser.os === OS.ANDROID) && isUndefined(browser.device)) {
       deviceName = ({
-        '5': 'Google Nexus 5',
-        '4.4': 'Samsung Galaxy S5',
-        '4.3': 'Samsung Galaxy S4',
-        '4.2': 'Google Nexus 4',
-        '4.1': 'Samsung Galaxy S3',
-        '4': 'Google Nexus',
+        '5': 'google nexus 5',
+        '4.4': 'samsung salaxy s5',
+        '4.3': 'samsung salaxy s4',
+        '4.2': 'google nexus 4',
+        '4.1': 'samsung salaxy s3',
+        '4': 'google nexus',
       })[browser.osVersion];
     }
 
     // do it like that until only available version on SauceLabs and BrowserStack
     // is different
     if ((browser.name === BROWSER.EDGE) && isUndefined(browser.version)) {
-      browserVersion = '12';
+      browserVersion = '13';
     }
 
-    let config = {
+    const config = {
       name: browser.displayName
     };
 
     if (appium) {
-      config = mergeAll([config, {
+      return {
+        ...config,
         browserName,
         device: deviceName,
         platform: ({
-          [OS.IOS]: 'MAC',
-          [OS.ANDROID]: 'ANDROID'
+          [OS.IOS]: 'mac',
+          [OS.ANDROID]: 'android'
         })[browser.os]
-      }]);
-    } else {
-      config = mergeAll([config, {
-        browser: browserName,
-        browser_version: browserVersion,
-        os: osName,
-        os_version: osVersion
-      }]);
+      };
     }
-
-    return config;
+    
+    return {
+      ...config,
+      browser: browserName,
+      browser_version: browserVersion,
+      os: osName,
+      os_version: osVersion
+    };
   }
 
   /**
