@@ -68,6 +68,12 @@ const defaultConfig = {
     os: 'android',
     osVersion: '5'
   }, {
+    displayName: 'Android Browser',
+    name: 'android browser',
+    version: '5.1',
+    os: 'android',
+    osVersion: '5.1'
+  }, {
     displayName: 'Android Browser Old',
     name: 'android browser',
     version: '4.4',
