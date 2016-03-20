@@ -19,7 +19,7 @@ RewireAPI.__Rewire__('IGNORED_LOGS', [
 ]);
 
 
-suite('API', () => {
+suite('log utils - API', () => {
   test('named export type', () => {
     assert.isFunction(parse, 'parse is a function');
     assert.isFunction(isIgnored, 'isIgnored is a function');
