@@ -249,10 +249,10 @@ export default class BrowserStackProvider /*implements Provider*/ {
     if ((browser.os === OS.ANDROID) && isUndefined(browser.device)) {
       deviceName = ({
         '5': 'google nexus 5',
-        '4.4': 'samsung salaxy s5',
-        '4.3': 'samsung salaxy s4',
+        '4.4': 'samsung galaxy s5',
+        '4.3': 'samsung galaxy s4',
         '4.2': 'google nexus 4',
-        '4.1': 'samsung salaxy s3',
+        '4.1': 'samsung galaxy s3',
         '4': 'google nexus',
       })[browser.osVersion];
     }
@@ -278,7 +278,7 @@ export default class BrowserStackProvider /*implements Provider*/ {
         })[browser.os]
       };
     }
-    
+
     return {
       ...config,
       browser: browserName,

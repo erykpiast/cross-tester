@@ -1,4 +1,5 @@
 import { map } from 'bluebird';
+import { curry } from 'ramda';
 
 /**
  * @function chain - creates sequence of promises from array or tree
@@ -69,12 +70,13 @@ export function chain(init, sequence) {
  * @param {Array} fns - collection of Promises' factories
  *   @property {Function} fns[n] - function that produces Promise, called when...
  *     see Bluebird's Promises.map documentation
- *
  * @param {Number} limit - maximum number of pending promises
+ *
+ * @return {Promise<Array>}
  */
-export function concurrent(fns, limit) {
+export const concurrent = curry(function concurrent(fns, limit) {
   return map(fns, (fn) => fn(), { concurrency: limit });
-}
+});
 
 
 /**
@@ -88,7 +90,7 @@ export function concurrent(fns, limit) {
  */
 export function andReturn(fn) {
   return (data) =>
-    fn(null, data).then(() => data, () => data);
+    Promise.resolve(fn(data)).then(() => data, () => data);
 }
 
 
@@ -103,7 +105,7 @@ export function andReturn(fn) {
  */
 export function andThrow(fn) {
   return (err) =>
-    fn(err).then(() => {
+    Promise.resolve(fn(err)).then(() => {
       throw err;
     }, () => {
       throw err;
@@ -116,7 +118,7 @@ export function andThrow(fn) {
  * @access pubilc
  *
  * @param {Function} fn
- * @param {*} [...args]- 
+ * @param {*} [...args]-
  *
  * @return {Function}
  */

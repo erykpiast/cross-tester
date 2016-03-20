@@ -1,10 +1,18 @@
 import {
+  curry,
+  flip,
   isNil,
   is
 } from 'ramda';
 
-import { concurrent, andReturn, andThrow, call } from './promises-util';
+import {
+  concurrent,
+  andReturn,
+  andThrow,
+  call
+} from './promises-util';
 import createConnector from './wd-connector';
+import { objectify } from './utils';
 
 const isFunction = is(Function);
 const isObject = is(Object);
@@ -62,12 +70,10 @@ export default function run({
 
   // define tests for all the websites in all browsers (from current config file)
   const testingSessions = browsers
-  .map((browser) => {
-    return {
-      test: connect(browser, userName, accessToken),
-      browserName: browser.displayName
-    };
-  })
+  .map((browser) => ({
+    test: connect(browser, userName, accessToken),
+    browserName: browser.displayName
+  }))
   .map(({ test, browserName }) => {
     function print(message) {
       return andReturn(() => Promise.resolve(verbose ? console.log(`${browserName} - ${message}`) : 0));
@@ -123,12 +129,6 @@ export default function run({
 
   // run all tests with some concurrency
   return Provider.getConcurrencyLimit(userName, accessToken)
-    .then((concurrencyLimit) => concurrent(testingSessions, concurrencyLimit))
-    .then((resultsForAllTests) => {
-      return resultsForAllTests.reduce((map, { browser, results, logs } = {}) => {
-        map[browser] = { results, logs };
-
-        return map;
-      }, {});
-    });
+    .then(concurrent(testingSessions))
+    .then(objectify('browser'));
 }
