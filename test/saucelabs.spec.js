@@ -185,7 +185,7 @@ suite('SauceLabs provider - parseBrowser function', () => {
 
       test('Android Browser', () => {
         let input, output;
-        
+
         input = {
           displayName: 'Android KitKat Browser',
           name: 'android browser',
@@ -196,7 +196,7 @@ suite('SauceLabs provider - parseBrowser function', () => {
         output = SauceLabs.parseBrowser(input);
 
         assert.equal(output.browserName, 'browser', 'browser name is valid');
-        
+
         input = {
           displayName: 'Android JellyBean Browser',
           name: 'android browser',
@@ -246,6 +246,47 @@ suite('SauceLabs provider - parseBrowser function', () => {
         output = SauceLabs.parseBrowser(input);
 
         assert.equal(output.browserName, 'safari', 'browser name is valid');
+      });
+    });
+  });
+});
+
+const USER = process.env.SAUCELABS_USER;
+const TOKEN = process.env.SAUCELABS_TOKEN;
+(USER && TOKEN ? suite : suite.skip)('SauceLabs provider - API tests', () => {
+  test('creating instance', () => {
+    assert.doesNotThrow(() => {
+      new SauceLabs(USER, TOKEN);
+    });
+  });
+
+  suite('instance methods', function() {
+    this.timeout(2 * 60 * 1000);
+    let provider;
+    let initResult;
+
+    setup((done) => {
+      provider = new SauceLabs(USER, TOKEN);
+      initResult = provider.init({
+        displayName: 'provider API test',
+        name: 'chrome',
+        version: '40',
+        os: 'windows',
+        osVersion: '7'
+      }).then(() => done(), done);
+    });
+
+    teardown((done) => {
+      provider.quit().then(done, done);
+    });
+
+    test('init', (done) => {
+      assert.isObject(initResult);
+      assert.isFunction(initResult.then);
+
+      initResult.then((sessionId) => {
+        assert.isDefined(sessionId);
+        done();
       });
     });
   });
