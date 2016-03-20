@@ -2,11 +2,15 @@
 import { default as chai, assert } from 'chai';
 import chaiSpies from 'chai-spies';
 import chaiSpiesTdd from 'chai-spies-tdd';
+import { nAry } from 'ramda';
 
 chai.use(chaiSpies);
 chai.use(chaiSpiesTdd);
 
+import { andReturn } from '../src/promises-util';
 import SauceLabs from '../src/wd-providers/saucelabs';
+
+const n = nAry(0);
 
 suite('SauceLabs provider - parseBrowser function', () => {
   test('API', () => {
@@ -273,11 +277,12 @@ const TOKEN = process.env.SAUCELABS_TOKEN;
         version: '40',
         os: 'windows',
         osVersion: '7'
-      }).then(() => done(), done);
+      })
+      .then(andReturn(n(done)), done);
     });
 
     teardown((done) => {
-      provider.quit().then(done, done);
+      provider.quit().then(n(done), done);
     });
 
     test('init', (done) => {
@@ -285,9 +290,38 @@ const TOKEN = process.env.SAUCELABS_TOKEN;
       assert.isFunction(initResult.then);
 
       initResult.then((sessionId) => {
-        assert.isDefined(sessionId);
+        assert.isDefined(sessionId, 'session id is defined');
         done();
       });
+    });
+
+    test('execute', (done) => {
+      provider.execute('return 2 + 2')
+      .then((res) => {
+        assert.equal(res, 4, 'executed code is evaluated and the result is returned');
+        done();
+      }, done);
+    });
+
+    test('launched browser', (done) => {
+      provider.execute('return window.navigator.userAgent')
+      .then((ua) => {
+        assert.include(ua, 'Chrome', 'requested browser is launched');
+        assert.include(ua, '40', 'requested browser version is launched');
+        assert.include(ua, 'Windows NT 6.1', 'requested operating system is launched');
+        done();
+      }, done);
+    });
+
+    test('open', (done) => {
+      const requestedUrl = 'http://blank.org/';
+
+      provider.open(requestedUrl)
+      .then(() => provider.execute('return window.location.href;'))
+      .then((url) => {
+        assert.equal(url, requestedUrl, 'requested page is opened');
+        done();
+      }, done);
     });
   });
 });

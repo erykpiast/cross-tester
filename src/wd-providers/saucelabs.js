@@ -64,7 +64,7 @@ export default class SauceLabsProvider /*implements Provider*/ {
     //   retryDelay: 100
     // });
     return this._driver.init(this.constructor.parseBrowser(browser))
-      .then(nth(1), (err) => {
+      .then(nth(0), (err) => {
         if(err.message.match(/Browser combination invalid/)) {
           throw new Error('requested browser is not supported');
         } else if (err.message.match(/The environment you requested was unavailable/)) {
@@ -268,10 +268,10 @@ export default class SauceLabsProvider /*implements Provider*/ {
           automationName: 'Selendroid'
         };
       }
-      
+
       return config;
     }
-    
+
     return {
       ...config,
       version: browserVersion,
