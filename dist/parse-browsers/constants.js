@@ -1,10 +1,10 @@
 'use strict';
 
-var _BROWSER_ALIAS, _OS_PREFERABLE_VERSIO, _OS_ALIAS, _OS_VERSION_MAPPING, _SYSTEM_BROWSER;
-
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
+var _BROWSER_ALIAS, _OS_PREFERABLE_VERSIO, _OS_ALIAS, _OS_VERSION_MAPPING, _SYSTEM_BROWSER;
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 

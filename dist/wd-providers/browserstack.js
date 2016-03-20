@@ -1,12 +1,12 @@
 'use strict';
 
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _ramda = require('ramda');
 
@@ -59,6 +59,7 @@ var BrowserStackProvider /*implements Provider*/ = function () {
    *
    * @return {Promise<String>} promise of session id
    */
+
 
   _createClass(BrowserStackProvider, [{
     key: 'init',
@@ -243,51 +244,62 @@ var BrowserStackProvider /*implements Provider*/ = function () {
       }
 
       if (browser.name === _constants.BROWSER.SAFARI_MOBILE) {
-        osName = 'MAC';
-        browserName = 'iPad';
+        osName = 'os x';
+
+        if (!isUndefined(browser.device) && (0, _ramda.contains)(_constants.DEVICE.IPAD, browser.device)) {
+          browserName = 'ipad';
+        } else {
+          browserName = 'iphone';
+        }
       }
 
       if (browser.name === _constants.BROWSER.ANDROID) {
         browserName = 'android';
       }
 
-      if (browser.device === _constants.DEVICE.IPHONE) {
+      if (browser.name === _constants.BROWSER.IE) {
+        browserName = 'ie';
+      }
+
+      if (browser.device === _constants.DEVICE.IPHONE || isUndefined(browser.device)) {
         deviceName = {
-          '8': 'iPhone 6',
-          '8.3': 'iPhone 6',
-          '7': 'iPhone 5S',
-          '6': 'iPhone 5',
-          '5.1': 'iPhone 4S',
-          '5': 'iPhone 4S'
+          '9.1': 'iphone 6s',
+          '8': 'iphone 6',
+          '8.3': 'iphone 6',
+          '7': 'iphone 5s',
+          '6': 'iphone 5',
+          '5.1': 'iphone 4s',
+          '5': 'iphone 4s'
         }[browser.osVersion];
       }
 
       if (browser.device === _constants.DEVICE.IPAD) {
         deviceName = {
-          '8': 'iPad Air',
-          '8.3': 'iPad Air',
-          '7': 'iPad 4th',
-          '6': 'iPad 3rd (6.0)',
-          '5.1': 'iPad 3rd',
-          '5': 'iPad 2 (5.0)'
+          '9.1': 'ipad air 2',
+          '8.3': 'ipad air',
+          '8': 'ipad air',
+          '7': 'ipad 4th',
+          '6': 'ipad 3rd (6.0)',
+          '5.1': 'ipad 3rd',
+          '5': 'ipad 2 (5.0)'
         }[browser.osVersion];
       }
 
       if (browser.os === _constants.OS.ANDROID && isUndefined(browser.device)) {
         deviceName = {
-          '5': 'Google Nexus 5',
-          '4.4': 'Samsung Galaxy S5',
-          '4.3': 'Samsung Galaxy S4',
-          '4.2': 'Google Nexus 4',
-          '4.1': 'Samsung Galaxy S3',
-          '4': 'Google Nexus'
+          '5': 'google nexus 5',
+          '4.4': 'samsung galaxy s5',
+          '4.3': 'samsung galaxy s4',
+          '4.2': 'google nexus 4',
+          '4.1': 'samsung galaxy s3',
+          '4': 'google nexus'
         }[browser.osVersion];
       }
 
       // do it like that until only available version on SauceLabs and BrowserStack
       // is different
       if (browser.name === _constants.BROWSER.EDGE && isUndefined(browser.version)) {
-        browserVersion = '12';
+        browserVersion = '13';
       }
 
       var config = {
@@ -297,21 +309,19 @@ var BrowserStackProvider /*implements Provider*/ = function () {
       if (appium) {
         var _OS$IOS$OS$ANDROID$br;
 
-        config = (0, _ramda.mergeAll)([config, {
+        return _extends({}, config, {
           browserName: browserName,
           device: deviceName,
-          platform: (_OS$IOS$OS$ANDROID$br = {}, _defineProperty(_OS$IOS$OS$ANDROID$br, _constants.OS.IOS, 'MAC'), _defineProperty(_OS$IOS$OS$ANDROID$br, _constants.OS.ANDROID, 'ANDROID'), _OS$IOS$OS$ANDROID$br)[browser.os]
-        }]);
-      } else {
-        config = (0, _ramda.mergeAll)([config, {
-          browser: browserName,
-          browser_version: browserVersion,
-          os: osName,
-          os_version: osVersion
-        }]);
+          platform: (_OS$IOS$OS$ANDROID$br = {}, _defineProperty(_OS$IOS$OS$ANDROID$br, _constants.OS.IOS, 'mac'), _defineProperty(_OS$IOS$OS$ANDROID$br, _constants.OS.ANDROID, 'android'), _OS$IOS$OS$ANDROID$br)[browser.os]
+        });
       }
 
-      return config;
+      return _extends({}, config, {
+        browser: browserName,
+        browser_version: browserVersion,
+        os: osName,
+        os_version: osVersion
+      });
     }
 
     /**

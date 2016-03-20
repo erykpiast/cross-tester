@@ -1,10 +1,12 @@
 'use strict';
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _ramda = require('ramda');
 
@@ -64,6 +66,7 @@ var SauceLabsProvider /*implements Provider*/ = function () {
    *
    * @return {Promise<String>} promise of session id
    */
+
 
   _createClass(SauceLabsProvider, [{
     key: 'init',
@@ -258,23 +261,23 @@ var SauceLabsProvider /*implements Provider*/ = function () {
       }
 
       if (browser.device === _constants.DEVICE.IPHONE) {
-        deviceName = 'iPhone Simulator';
+        deviceName = 'iphone simulator';
       }
 
       if (browser.device === _constants.DEVICE.IPAD) {
-        deviceName = 'iPad Simulator';
+        deviceName = 'ipad simulator';
       }
 
       if (browser.os === _constants.OS.ANDROID && isUndefined(browser.device)) {
-        deviceName = 'Android Emulator';
+        deviceName = 'android emulator';
       }
 
       if (browser.os === _constants.OS.ANDROID && !isVersionHandledByOldAppiumApi(browser.osVersion)) {
-        browserName = 'Browser';
+        browserName = 'browser';
       }
 
       if (browser.name === _constants.BROWSER.EDGE) {
-        browserName = 'MicrosoftEdge';
+        browserName = 'microsoftedge';
       }
 
       // do it like that until only available version on SauceLabs and BrowserStack
@@ -289,29 +292,28 @@ var SauceLabsProvider /*implements Provider*/ = function () {
       };
 
       if (appium) {
-        config = (0, _ramda.mergeAll)([config, {
+        config = _extends({}, config, {
           deviceName: deviceName,
           deviceOrientation: 'portrait',
-          deviceType: 'phone',
           platformName: browser.os,
           platformVersion: browser.osVersion,
           appiumVersion: '1.4.16'
-        }]);
+        });
 
         if (appiumLegacy) {
-          config = (0, _ramda.mergeAll)([config, {
+          return _extends({}, config, {
             browserName: '',
             automationName: 'Selendroid'
-          }]);
+          });
         }
-      } else {
-        config = (0, _ramda.mergeAll)([config, {
-          version: browserVersion,
-          platform: browser.os + (browser.osVersion ? ' ' + browser.osVersion : '')
-        }]);
+
+        return config;
       }
 
-      return config;
+      return _extends({}, config, {
+        version: browserVersion,
+        platform: browser.os + (browser.osVersion ? ' ' + browser.osVersion : '')
+      });
     }
 
     /**

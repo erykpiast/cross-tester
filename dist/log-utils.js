@@ -215,5 +215,6 @@ function _formatUrl(url) {
   var port = _parseUrl.port;
   var pathname = _parseUrl.pathname;
 
+
   return [protocol ? protocol + '//' : '', hostname, port && port !== 80 ? ':' + port : '', pathname].join('');
 }

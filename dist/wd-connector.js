@@ -102,6 +102,7 @@ function createConnector(Provider) {
         };
       },
 
+
       /**
        * @method quit
        * @access public
@@ -117,6 +118,7 @@ function createConnector(Provider) {
           return _this2._driver.quit();
         };
       },
+
 
       /**
        * @method open
@@ -139,6 +141,7 @@ function createConnector(Provider) {
           })]);
         };
       },
+
 
       /**
        * @method getBrowserLogs
@@ -182,6 +185,7 @@ function createConnector(Provider) {
         };
       },
 
+
       /**
        * @method getResults
        * @access public
@@ -207,6 +211,7 @@ function createConnector(Provider) {
         };
       },
 
+
       /**
        * @method execute
        * @access public
@@ -224,6 +229,7 @@ function createConnector(Provider) {
           return _this6._driver.execute(code);
         };
       },
+
 
       /**
        * @method sleep

@@ -3,13 +3,15 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.concurrent = undefined;
 exports.chain = chain;
-exports.concurrent = concurrent;
 exports.andReturn = andReturn;
 exports.andThrow = andThrow;
 exports.call = call;
 
 var _bluebird = require('bluebird');
+
+var _ramda = require('ramda');
 
 /**
  * @function chain - creates sequence of promises from array or tree
@@ -81,14 +83,15 @@ function chain(init, sequence) {
  * @param {Array} fns - collection of Promises' factories
  *   @property {Function} fns[n] - function that produces Promise, called when...
  *     see Bluebird's Promises.map documentation
- *
  * @param {Number} limit - maximum number of pending promises
+ *
+ * @return {Promise<Array>}
  */
-function concurrent(fns, limit) {
+var concurrent = exports.concurrent = (0, _ramda.curry)(function concurrent(fns, limit) {
   return (0, _bluebird.map)(fns, function (fn) {
     return fn();
   }, { concurrency: limit });
-}
+});
 
 /**
  * @function andReturn - creates function that calls passed function with its
@@ -101,7 +104,7 @@ function concurrent(fns, limit) {
  */
 function andReturn(fn) {
   return function (data) {
-    return fn(null, data).then(function () {
+    return Promise.resolve(fn(data)).then(function () {
       return data;
     }, function () {
       return data;
@@ -120,7 +123,7 @@ function andReturn(fn) {
  */
 function andThrow(fn) {
   return function (err) {
-    return fn(err).then(function () {
+    return Promise.resolve(fn(err)).then(function () {
       throw err;
     }, function () {
       throw err;
@@ -133,7 +136,7 @@ function andThrow(fn) {
  * @access pubilc
  *
  * @param {Function} fn
- * @param {*} [...args]- 
+ * @param {*} [...args]-
  *
  * @return {Function}
  */
